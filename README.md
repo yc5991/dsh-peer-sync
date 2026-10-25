@@ -1,8 +1,43 @@
 # dsh-peer-sync
 
-在两台用**网线直连**的机器之间（这里是 Windows `10.77.0.1` ↔ macOS `10.77.0.2`）保持 dsh 的配置一致，不用再手动 scp/粘贴。
+让两台机器上的 dsh（Windows ↔ macOS，网线直连或同一个局域网/Wi-Fi）**自动互相发现、自动配对**，然后保持配置一致，不用再手动 scp / 粘贴 / 填 IP。
 
-同一份代码在两边各装一次，两端是对称的：任何一边改了配置，另一边在几秒到 15 秒内自动跟上。
+同一份代码两边各装一次，两端完全对称：任何一边改了配置，另一边在几秒到 15 秒内跟上。
+
+## 快速开始（两边各一条命令）
+
+在**两台**机器的 dsh 里，各对 agent 说一句：
+
+> 从 https://github.com/yc5991/dsh-peer-sync 安装这个插件，然后重启
+
+agent 会执行 `plugin_manager install_bundle`（GitHub 直装），装完重启 dsh。
+
+之后两台机器会：
+
+1. 每隔几秒在局域网广播一条 UDP beacon（`udp:4401`，含机器 id、HTTP 端口、token 指纹，不含密钥）
+2. 收到陌生 beacon → 自动完成配对握手，各自交换自己的 token，写进本机 `config.json`
+3. 开始同步，日志里出现 `paired (discovered)` 和 `peer saved`
+
+**不需要**填 IP、端口、token——除非你的网络阻止广播（见下面的排查）。
+
+## 自动发现与配对
+
+| 配置 | 默认 | 说明 |
+|---|---|---|
+| `pairing.enabled` | `true` | 关掉就只剩手动配置的对端 |
+| `pairing.mode` | `"auto"` | `auto`：首配自动；`code`：必须出示配对码；`off`：只用手写 peers |
+| `pairing.code` | `""` | `code` 模式下的配对码；也用于"已有一个对端后"再加新机器 |
+| `pairing.port` | `4401` | UDP 广播端口，两台要一致 |
+| `pairing.announceMs` | `10000` | 广播间隔 |
+| `pairing.trustFirstOnly` | `true` | 只有"还没有任何对端"时才自动接受；之后必须给配对码 |
+
+安全边界（重要）：
+
+- `auto` 模式下的首次配对**没有任何密钥**，同网段的任何人都能完成握手并拿到你的 token，进而读到你的 API key。**在公共 Wi-Fi / 宿舍网请把 `mode` 改成 `"code"`**，两台设同一个码（例如 `"code": "482913"`）。
+- 已经配置过的地址例外：如果对端地址本来就在你的 `peers` 里，它来握手会被接受（这是为了"Mac 装完不用改配置"这个场景）。
+- 配对只是交换 token，**不会**因此共享凭据：真正的同步内容仍由 `sync.*` 开关决定，凭据要 `sync.credentials: true` 才走。
+
+> 直连网线（点对点，中间没有别人的设备）用默认 `auto` 是合适的；同一个家里 Wi-Fi 想更稳妥就换 `code`。
 
 ## 同步什么
 
@@ -80,60 +115,65 @@
   "version": 1,
   "enabled": true,
   "self": "win",
-  "token": "两台机器必须一致的共享密钥",
+  "token": "本机自己的密钥（首次运行自动生成，配对时与对端交换）",
   "listen": { "host": "10.77.0.1", "port": 4400 },
-  "peers": [{ "name": "mac", "url": "http://10.77.0.2:4400" }],
+  "peers": [{ "id": "对端节点 id", "name": "mac", "url": "http://10.77.0.2:4400", "token": "对端的 token" }],
   "autoPush": true,
   "autoPull": true,
   "pullIntervalMs": 15000,
   "timeoutMs": 4000,
-  "sync": { "patch": true, "credentials": true, "presets": true, "bundles": true },
+  "pairing": { "enabled": true, "mode": "auto", "port": 4401, "code": "", "announceMs": 10000, "trustFirstOnly": true },
+  "sync": { "patch": true, "credentials": true, "presets": true, "bundles": true, "projects": true, "sessions": true },
   "bundlesMode": "detect"
 }
 ```
+
+`peers` 由配对自动填写；手写也支持（那样就不依赖发现）。注意每台机器的 `token` 是**自己**的，`peers[].token` 存的是**对端**的——配对时自动交换，手写时把对方的 token 填进去即可。
 
 因为 `cordis.patch.yml` 本身是被同步的对象，插件的 Loader 行**故意不带 config** —— 身份、监听地址、密钥只存在这个本地文件里，不会被对端覆盖。
 
 ## 安装
 
-Windows（已完成）：
+**推荐**：两台机器都在 dsh 里让 agent 执行
 
-```powershell
-# 1. 包已经在 profile 里了：dsh.profile.bundles 含 dsh-peer-sync，依赖是 link: 指向本目录
-# 2. 配置已经写在 ~/.dsh/peer-sync/config.json
-# 3. 重启一次 dsh，让单实例干净地绑定端口
+```
+plugin_manager  action=install_bundle  target=https://github.com/yc5991/dsh-peer-sync
 ```
 
-macOS：
+（也接受 `github:yc5991/dsh-peer-sync`。）装完重启 dsh 一次，然后等待自动发现。
+
+**手动**（不想用 agent 的话）：
 
 ```bash
-# 1. 把本目录拷到 Mac（不要拷 node_modules、不要拷 test/）
-scp -r dsh-peer-sync mac:~/dsh-peer-sync
-
-# 2. 装依赖（只用到 yaml）
-cd ~/dsh-peer-sync && pnpm install
-
-# 3. 写本机配置：self=mac，listen 10.77.0.2:4400，peers 指向 win
-mkdir -p ~/.dsh/peer-sync
-
-# 4. 让 Mac 上的 dsh 装这个包（agent 里执行）：
-#    plugin_manager  action=install_bundle  target=/Users/<你>/dsh-peer-sync
-
-# 5. 重启 dsh
+git clone https://github.com/yc5991/dsh-peer-sync.git
+cd dsh-peer-sync && pnpm install
+# 再让 dsh 以目录方式安装：target=<绝对路径>
 ```
 
-两台机器的 `token` 必须相同。
+两台机器**不需要**写任何 IP/token；`config.json` 会在首次运行时自动生成（随机 token、`listen: 127.0.0.1:4400`、`peers: []`），配对成功后自动补上对端。
 
-## 防火墙（只放行网线那一侧，一次即可）
+如果你想让某台机器**只监听网线那个地址**，把 `listen.host` 改成 `10.77.0.1`（或对应网卡 IP）即可；想让它自动选，保持 `127.0.0.1` 时只有本机能连——**跨机必须改成实际网卡地址**。
 
-Windows（管理员 PowerShell）：
+## 防火墙（只放行那一侧接口，一次即可）
+
+Windows（管理员 PowerShell），网线那侧：
 
 ```powershell
 New-NetFirewallRule -DisplayName "dsh-peer-sync" -Direction Inbound -Protocol TCP `
   -LocalAddress 10.77.0.1 -LocalPort 4400 -Action Allow -Profile Private
+# 自动发现用的 UDP 广播端口
+New-NetFirewallRule -DisplayName "dsh-peer-sync discovery" -Direction Inbound -Protocol UDP `
+  -LocalPort 4401 -Action Allow -Profile Private
 ```
 
 macOS 如果开了"应用防火墙"，首次绑定端口时允许 dsh（或 `node`）接收入站连接。
+
+## 排错：发现不了对方
+
+1. 两边都在**同一个二层网络**吗？网线直连要同网段（例如 `10.77.0.1` / `10.77.0.2`、掩码 /24）；如果一台是 `169.254.x.x`，说明没拿到地址。
+2. 入站放行了吗？Windows 默认拦入站，见上面的两条规则。
+3. 广播被挡？把 `pairing.port` 两边改成同一个值（默认 4401），或在 `peers` 里直接写对端 URL 作为兜底——发现失败不影响手动配置的对端。
+4. 看日志：`~/.dsh/peer-sync/sync.log`，正常应依次出现 `discovery on udp:4401` → `paired (discovered)` → `peer saved`。
 
 ## 怎么确认在工作
 
