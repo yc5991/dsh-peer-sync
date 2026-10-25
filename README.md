@@ -100,6 +100,17 @@ agent 会执行 `plugin_manager install_bundle`（GitHub 直装），装完重�
 
 ## 版本与冲突
 
+`cordis.patch.yml` **按条目合并**，不是整文件覆盖：
+
+- 每个 `- id: xxx` 是一个槽位；`- insert:` 块按被插入条目的 `config.id` 拆成 `insert:<id>` 槽位（agent preset 没有顶层 id，必须这样建键，否则会被静默丢掉）。
+- 合并是三方比较（用 `state.json` 里 `patchBase` 记的上次一致快照）：只有对端改过的槽位采纳对端，只有本机改过的保留本机，两边都改才按文件修改时间新的胜出。
+- 胜出的那一版会写回本机，然后推给对端 —— 所以**两边最终是并集**，不是谁覆盖谁。
+- 同一槽位两边都改时，落败的那个条目单独存成 `cordis.patch.yml.conflict-<对端>-<时间>`，只含冲突条目，不会覆盖整个文件。
+- patch 的"版本"是**条目集合的哈希**，不是字节哈希：两边的注释、格式、条目顺序不同也不算差异，否则会一直互相重发。
+- 代价：合并后文件按 `id` 排序（`insert:` 块排在最后），手工写的条目顺序会被规范化一次，注释保留。
+
+其它单元（presets、credentials、projects）仍是整单元比较，冲突时留 `.conflict-*` 副本。
+
 每个单元有内容哈希，两端各记一份"上次达成一致的哈希"（`state.json` 的 `bases`）。
 
 - 只有一边变 → 直接快进。
@@ -142,13 +153,20 @@ plugin_manager  action=install_bundle  target=https://github.com/yc5991/dsh-peer
 
 （也接受 `github:yc5991/dsh-peer-sync`。）装完重启 dsh 一次，然后等待自动发现。
 
-**手动**（不想用 agent 的话）：
+**没有 `plugin_manager` 时**：它只在 Creator 模式（或显式放了 `tool-plugin-manager` 的 preset）里挂载，普通会话里没有。两条替代路径：
 
 ```bash
+# 1) 直接装包（等价于工具做的事），clone 不通时用 codeload
+cd ~/.dsh/profiles/<profile>
+pnpm add https://codeload.github.com/yc5991/dsh-peer-sync/tar.gz/refs/heads/main
+# 再把 "dsh-peer-sync" 追加进 package.json 的 dsh.profile.bundles
+
+# 2) 克隆 + 目录安装（要改代码时用这个）
 git clone https://github.com/yc5991/dsh-peer-sync.git
-cd dsh-peer-sync && pnpm install
-# 再让 dsh 以目录方式安装：target=<绝对路径>
+cd dsh-peer-sync && pnpm install   # 再以目录方式安装：target=<绝对路径>
 ```
+
+固定版本就把 `refs/heads/main` 换成具体 commit：`tar.gz/<40位 sha>`。
 
 两台机器**不需要**写任何 IP/token；`config.json` 会在首次运行时自动生成（随机 token、`listen: "auto"`、`peers: []`），配对成功后自动补上对端。
 
