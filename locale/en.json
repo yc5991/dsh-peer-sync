@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Peer Sync",
+    "description": "Keeps profile configuration, credential refs and agent presets identical across two machines joined by a direct cable."
+  }
+}

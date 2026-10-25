@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "跨机同步",
+    "description": "在两台用网线直连的机器之间保持 profile 配置、凭据引用与 agent preset 一致。"
+  }
+}

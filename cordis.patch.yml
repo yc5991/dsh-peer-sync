@@ -1,0 +1,10 @@
+# Insert the peer-sync Host plugin into a profile's layer stack.
+#
+# The row deliberately carries no config: everything machine-specific (identity,
+# listen address, shared token, peer list) lives in the machine-local
+# `$DSH_HOME/peer-sync/config.json`, because this very patch file is one of the
+# things the plugin synchronizes. A config here would be copied to the other
+# machine and overwrite that machine's identity.
+- insert:
+    - id: peer-sync
+      name: 'dsh-peer-sync'
