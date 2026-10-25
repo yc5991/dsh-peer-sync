@@ -1,4 +1,5 @@
 import { SyncEngine } from './lib/sync.js'
+import { serviceOf } from './lib/services.js'
 
 export const name = 'peer-sync'
 
@@ -18,7 +19,21 @@ export function apply(ctx) {
     engine.start().catch((error) => {
       engine.log.error(`start failed: ${error && error.message ? error.message : error}`)
     })
+
+    // The settings tab reads one snapshot; the page carries it because the
+    // Desktop shell may not share the web server's origin with the panel.
+    let untap = null
+    const webServer = serviceOf(ctx, 'webServer')
+    if (webServer && typeof webServer.tapIndex === 'function') {
+      try {
+        untap = webServer.tapIndex((html) => engine.injectSnapshot(html))
+      } catch (error) {
+        engine.log.warn(`cannot inject the settings snapshot: ${error && error.message ? error.message : error}`)
+      }
+    }
+
     return async () => {
+      if (typeof untap === 'function') untap()
       await engine.stop()
     }
   })
