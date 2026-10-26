@@ -156,6 +156,36 @@ agent 会执行 `plugin_manager install_bundle`（GitHub 直装），装完重�
 
 因为 `cordis.patch.yml` 本身是被同步的对象，插件的 Loader 行**故意不带 config** —— 身份、监听地址、密钥只存在这个本地文件里，不会被对端覆盖。
 
+## 项目共享：WebDAV 挂载（不复制、不建账号）
+
+插件可以在自己已有的 HTTP 通道上再暴露一个 WebDAV 端点，把本机的工作区目录共享出去。**没有 SMB、没有系统账号、没有额外端口**——认证就是配对时那枚 token（HTTP Basic，用户名随意，密码填 token）。
+
+```json
+{ "dav": { "enabled": true, "root": "" } }
+```
+
+`root` 留空 = `projectsRoot`（默认 `~/DSH/Projects`）。改完重载插件，日志里会出现：
+
+```
+dav: serving C:\Users\user\DSH\Projects at /dav
+```
+
+**macOS 挂载**（两种都行，第一次要输一次密码 = Windows 那台的 token，存在 Keychain 里以后不用再输）：
+
+- Finder → 前往 → 连接服务器 → `http://peer@10.77.0.1:4400/dav`
+- 或命令行：`mount_webdav -v http://peer@10.77.0.1:4400/dav ~/DSH/Remote/win`
+
+挂上之后在 dsh 里把 `~/DSH/Remote/win/demo` 加为工作区即可；读写都是实时的（同一批文件，不是同步）。
+
+Windows 反向挂载 WebDAV **不推荐**：要走 WebClient 服务、还得改注册表 `BasicAuthLevel`，稳定性差。Mac 的项目要给 Windows 看，最省事的是放进同一个共享目录。
+
+已知限制：
+
+- 只实现了 macOS WebDAVFS 需要的方法（OPTIONS/PROPFIND/GET/PUT/DELETE/MKCOL/MOVE/COPY/PROPPATCH/LOCK/UNLOCK）；`LOCK` 会返回合法 token 但**不强制加锁**（单写者场景够用，多写者不要依赖它）
+- 不支持 Range 请求和 `If-Match`/`If-None-Match` 条件写
+- 走 HTTP 明文 + Basic，token 在网线上可见；只在直连/可信局域网里开
+- 性能不如 SMB：大文件、大量小文件会慢；`node_modules`、`.git`、SQLite 库不要放进共享目录
+
 ## 安装
 
 **推荐**：两台机器都在 dsh 里让 agent 执行
