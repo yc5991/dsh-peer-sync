@@ -111,6 +111,19 @@ agent 会执行 `plugin_manager install_bundle`（GitHub 直装），装完重�
 
 其它单元（presets、credentials、projects）仍是整单元比较，冲突时留 `.conflict-*` 副本。
 
+### 让某个条目只在本机生效（`syncDeny`）
+
+`permission` 这类条目天然该由每台机器自己决定，两边共用一个值往往不是你想要的：
+
+```json
+{ "syncDeny": ["permission"] }
+```
+
+- 接受 `permission`、`id:permission`、`insert:chat` 三种写法
+- 被 deny 的条目**既不发出也不收进**，本机照旧生效
+- 列表是**并集**：任意一边写了 `permission`，两边都当它只在本机（两边必须对同一份"可交换视图"算哈希，否则永远对不上）
+- 被排除的条目不计入 patch 的内容哈希，所以各机可以独立编辑而不触发同步
+
 每个单元有内容哈希，两端各记一份"上次达成一致的哈希"（`state.json` 的 `bases`）。
 
 - 只有一边变 → 直接快进。
