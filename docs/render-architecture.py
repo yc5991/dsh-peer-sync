@@ -3,9 +3,19 @@
 Kept as a script rather than a hand-drawn file so the picture can be re-rendered
 when a box changes: the layout constants are the only thing that has to be
 adjusted, and every string below is a fact taken from the code, not a wish.
+
+The version comes from package.json instead of a literal, because a literal three
+releases out of date is exactly the sort of lie a diagram should not tell.
 """
 
+import json
+import os
+
 from PIL import Image, ImageDraw, ImageFont
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+with open(os.path.join(ROOT, "package.json"), encoding="utf-8") as handle:
+    VERSION = json.load(handle)["version"]
 
 W, H = 1760, 1240
 BG = "#F6F7F9"
@@ -51,9 +61,9 @@ def arrow(x1, y1, x2, y2, color="#7A8494", width=2, head=9):
         d.polygon([(x2, y2), (x2 - head, y2 - head // 2), (x2 - head, y2 + head // 2)], fill=color)
 
 
-text(56, 40, "dsh-peer-sync 0.8.0", 32, INK, bold=True)
+text(56, 40, f"dsh-peer-sync {VERSION}", 32, INK, bold=True)
 text(56, 84, "两台 DSH 通过直连网线互通：配置同步、会话可见、远程投递、项目挂载", 17, MUTED)
-text(W - 56, 46, "0.8.0 · 2026-10-27", 15, MUTED, anchor="ra")
+text(W - 56, 46, VERSION, 15, MUTED, anchor="ra")
 
 # ---------------------------------------------------------------- two engines
 COL_W = 640

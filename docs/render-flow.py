@@ -2,9 +2,17 @@
 
 Same reasoning as render-architecture.py: the flow is code-derived, so it lives
 in a script that can be re-rendered instead of in a drawing nobody can update.
+The version is read from package.json for the same reason as the other figure.
 """
 
+import json
+import os
+
 from PIL import Image, ImageDraw, ImageFont
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+with open(os.path.join(ROOT, "package.json"), encoding="utf-8") as handle:
+    VERSION = json.load(handle)["version"]
 
 W, H = 1760, 1330
 BG = "#F6F7F9"
@@ -38,7 +46,7 @@ def dot(x, y, color, r=6):
 
 text(56, 36, "跑起来是什么样：两条主流程", 30, INK, bold=True)
 text(56, 78, "左边是一次同步 tick，右边是一次远程投递；菱形是真正的判断分支，分支都在代码里", 16, MUTED)
-text(W - 56, 44, "dsh-peer-sync 0.8.0 · 2026-10-27", 14, MUTED, anchor="ra")
+text(W - 56, 44, f"dsh-peer-sync {VERSION}", 14, MUTED, anchor="ra")
 
 COL_W = 760
 LEFT_X, RIGHT_X = 56, W - 56 - COL_W
