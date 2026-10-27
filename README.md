@@ -211,6 +211,8 @@ cd dsh-peer-sync && pnpm install   # 再以目录方式安装：target=<绝对�
 
 固定版本就把 `refs/heads/main` 换成具体 commit：`tar.gz/<40位 sha>`。
 
+**用哪个 pnpm**：桌面版自带的 runtime pnpm（本机是 11.x）和 PATH 里的 pnpm（可能是 10.x）store 版本不同，混用会报 `ERR_PNPM_UNEXPECTED_STORE`。用 app 当初装这个包时那个 pnpm 重装即可；换机器时先把这点确认一遍。
+
 两台机器**不需要**写任何 IP/token；`config.json` 会在首次运行时自动生成（随机 token、`listen: "auto"`、`peers: []`），配对成功后自动补上对端。
 
 `listen.host` 支持 `"auto"`（默认）：优先选与已配对 peer 同网段的网卡，否则选一个私有地址（`10.` / `192.168.` / `172.16-31.`）；填具体 IP 也能固定下来。因为配对用的地址取自 beacon 的**来源地址**，所以对方回连时总是走"真的通"的那条路。
