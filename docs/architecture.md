@@ -149,7 +149,8 @@ flowchart TD
 | DAV 挂载 + 断线探测 | 已实测 | macOS `mounted:true, entries:2`；`ENOENT` 分支本机验过 |
 | 设置面板渲染 | 已实测 | 真机面板已渲染可用；之前的空态是 `tapIndex` 注入不到页面，改成面板自己取 |
 | 会话生命周期（建/投/中断/归档） | 已实测 | 面板建到对端 → 投入 `NEW-REMOTE-OK`；中断 → `turn/end`；归档本机通 |
-| 在对端归档（跨机） | 部分 | 入站 `POST /v1/remote/session/archive` 实测；跨机组合待对端 0.7.0 |
+| 在对端归档（跨机） | 已实测 | 我的面板归档她的 `d7e8bd03` → `archived:true` |
+| 预算到期后取回答案 | 已实测 | 1 秒预算 → `turn-in-progress`；8 秒后 `/v1/remote/result` 拿到正文 |
 
 ## 三条设计取舍
 

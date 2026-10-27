@@ -169,6 +169,16 @@ function panelApi(engine, ctx) {
         return
       }
 
+      if (req.method === 'POST' && route === '/result') {
+        const body = await readJsonBody(req)
+        // With a peer, read the answer over there; without one, read it here.
+        const answer = body && body.peer
+          ? await engine.remoteFetchResult(body.peer, body.sessionId)
+          : await engine.remoteResultRequest(body && body.sessionId)
+        sendJson(res, 200, answer)
+        return
+      }
+
       sendJson(res, 404, { ok: false, reason: 'unknown-route' })
     } catch (error) {
       engine.log.warn(`panel api ${req.method} ${req.url} failed: ${error && error.message ? error.message : error}`)

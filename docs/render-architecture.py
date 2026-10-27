@@ -149,7 +149,8 @@ ROWS = [
     ("DAV 挂载 + 断线探测", "macOS mounted:true, entries:2", DONE),
     ("设置面板渲染", "真机面板已渲染（用户确认）", DONE),
     ("会话生命周期（建/投/中断/归档）", "建→投→NEW-REMOTE-OK；中断→turn/end；归档本机通", DONE),
-    ("在对端归档（跨机）", "入站实测；跨机待对端 0.7.0", PARTIAL),
+    ("在对端归档（跨机）", "mac-lan 归档 d7e8bd03 → archived:true", DONE),
+    ("预算到期后取回答案", "1s 预算 → 8s 后 /result 拿到正文", DONE),
 ]
 
 col_x = [72, 72 + (W - 144) // 2]

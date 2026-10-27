@@ -183,6 +183,20 @@ curl.exe -X POST http://10.77.0.2:4399/v1/remote/cancel `
 
 归档也有对端版本：`POST /v1/remote/session/archive {"sessionId"}`，面板上用「在对端归档」。为什么是归档而不是删除——宿主侧的删除会被 Desktop shell 按内存回写状态，留下悬挂记录；归档是它自己提供的、可逆的那个动作。回合还在跑的会话会被拒（`the session is active (turn)`），先中断再归档。
 
+### 预算到了，答案还在：`GET /v1/remote/result`
+
+`waitSeconds` 只是**等待预算**，不是取消。回合超过预算时 `remotePrompt` 回 `turn-in-progress` 并走开，答案随后才出现在那台机器上。要给调用方一条回来的路：
+
+```powershell
+curl.exe -H "x-peer-token: <对端 token>" `
+  "http://10.77.0.2:4399/v1/remote/result?sessionId=session-…"
+# -> {"ok":true,"replied":true,"reply":"…","running":false,"lastSeq":19}
+```
+
+它只读窗口、不投递：`running: true` 表示回合还在跑（过一会再来），`replied: true` 表示拿到答案，`blocked` 与投递接口同义。面板上，结果停在"还在跑"时会出现「再取一次结果」。
+
+实测：预算 1 秒 → `turn-in-progress`（1.2 秒返回）→ 3 秒后 `running:true` → 8 秒后 `replied:true` + 正文，会话随后归档。
+
 ## 版本与冲突
 
 `cordis.patch.yml` **按条目合并**，不是整文件覆盖：

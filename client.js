@@ -174,7 +174,9 @@ window.__ModuleLoader__.load({
       'missing-session': ['没有指定会话', 'no session given'],
       'empty-text': ['没有内容可发', 'nothing to send'],
       'archive-failed': ['对端拒绝归档（回合进行中的会话不能归档）', 'the peer refused to archive it (a running turn blocks it)'],
+      'not-live': ['那台没有正在跑的回合（会话未附着），不需要中断', 'that session has no running turn in memory'],
       'cancel-failed': ['对端拒绝中断', 'the peer refused to cancel'],
+      'read-failed': ['读不到那个会话（不存在或没附着）', 'could not read that session'],
       'create-failed': ['对端建会话失败', 'the peer could not create the session'],
     }
 
@@ -238,6 +240,21 @@ window.__ModuleLoader__.load({
           setResult({ ok: false, reason: 'network-error', message: String((error && error.message) || error) })
         } finally {
           setStopping(false)
+        }
+      }
+
+      // The wait has a budget; the turn does not. When the budget runs out, come
+      // back for the answer instead of losing it.
+      const refetch = async () => {
+        setResult(null)
+        try {
+          const value = await api('/result', {
+            method: 'POST',
+            body: JSON.stringify({ peer: item.peer, sessionId: item.id }),
+          })
+          setResult(value)
+        } catch (error) {
+          setResult({ ok: false, reason: 'network-error', message: String((error && error.message) || error) })
         }
       }
 
@@ -340,6 +357,13 @@ window.__ModuleLoader__.load({
                 pending ? h('span', { style: S.dim }, L('对端在跑，最多等 120 秒', 'peer is running it, up to 120s')) : null,
               ),
               h(Outcome, { value: result }),
+              result && (result.reason === 'turn-in-progress' || result.running)
+                ? h(
+                    'button',
+                    { type: 'button', style: S.button, onClick: refetch },
+                    L('再取一次结果', 'Fetch the answer now'),
+                  )
+                : null,
             )
           : null,
       )
