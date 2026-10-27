@@ -98,6 +98,44 @@ agent 会执行 `plugin_manager install_bundle`（GitHub 直装），装完重�
 
 在另一台机器上"看"会话内容，仍然是打开那台机器上的 dsh；这个镜像解决的是"我知道对面有哪些会话、什么时候跑的、原始记录在这里"。
 
+## 远程投递（在对面跑，消耗对面的额度）
+
+会话不复制，但消息可以投过去。投递就是真的在那台机器的进程里开一个回合：它用那台的模型、那台的目录、那台的权限去执行工具，消耗那台的额度。发起方只收到回话，不参与执行。
+
+```json
+{ "remotePrompts": "allow" }
+```
+
+`off`（默认）/ `ask`（当前等同 `off`，启动时记一条警告）/ `allow`。本机拒收时返回 `403` 和 `reason: "remote-prompts-disabled"`。
+
+```powershell
+curl.exe -X POST http://10.77.0.2:4399/v1/remote/prompt `
+  -H "x-peer-token: <对端 token>" -H "content-type: application/json" `
+  -d '{\"sessionId\":\"session-...\",\"text\":\"只回复这一行：OK\",\"wait\":true,\"waitSeconds\":90}'
+```
+
+```json
+{ "ok": true, "requestId": "mvq6b1de-ewhyb80h", "accepted": true,
+  "replied": true, "reply": "CROSS-MACHINE-OK",
+  "queued": false, "started": true, "busyBefore": false,
+  "blocked": null, "reason": "replied", "waitedMs": 4900 }
+```
+
+`wait: false` 只回 `accepted` 就返回。`requestId` 是幂等键，同一个请求重发不会插两条消息。
+
+等待没拿到回话时，四种情况分开报——因为调用方该做的事完全不同：
+
+| 返回 | 含义 | 该做什么 |
+| --- | --- | --- |
+| `reason: "replied"` | 拿到回话 | 结束 |
+| `queued: true`、`reason: "agent-busy"` | 对面本来就有没结束的回合（`busyBefore: true`），你这条排队 | 等，或稍后重投 |
+| `blocked: "awaiting-owner-approval"` | 回合卡在**拥有方审批**上，`approval` 带 `id`/`tool`/`reason` | **等多久都没用**，得那台机器上的人点一下 |
+| `reason: "turn-in-progress"` | 回合在跑，预算内没答完 | 加大 `waitSeconds` 再等 |
+
+审批这一档不是猜出来的：`approval/asked` 之后没有配对的 `approval/decided`（`approval/policy`、`approval/cancelled` 会一次性清空）就是挂着。连续两次轮询都挂着就提前返回，不把预算耗在等一个人上。实测对面卡过 8 小时 19 分，审批框一直没人点——远程这侧原本只能看到"没回话"，看不出是这个原因。
+
+`started` 只表示"在这个观察窗口里看见了 `turn/start`"。窗口会从回合中间开始（`maxMessages` 是建议值，实际一次给几十条），所以**有 `reply` 就一定是跑过回合**，`started: false` 不代表没跑——判断用 `replied`，不要用 `started`。
+
 ## 版本与冲突
 
 `cordis.patch.yml` **按条目合并**，不是整文件覆盖：
@@ -148,9 +186,13 @@ agent 会执行 `plugin_manager install_bundle`（GitHub 直装），装完重�
   "timeoutMs": 4000,
   "pairing": { "enabled": true, "mode": "auto", "port": 4401, "code": "", "announceMs": 10000, "trustFirstOnly": true },
   "sync": { "patch": true, "credentials": true, "presets": true, "bundles": true, "projects": true, "sessions": true },
+  "share": { "sessions": true },
+  "remotePrompts": "allow",
   "bundlesMode": "detect"
 }
 ```
+
+`share.sessions` 和 `sync.sessions` 都认：前者控制"握手时通告本机会话清单"，后者是"把对端会话日志镜像到本地"。只想要远程投递、不想镜像日志时，开 `share.sessions` + `sync.sessions: false` 就够。
 
 `peers` 由配对自动填写；手写也支持（那样就不依赖发现）。注意每台机器的 `token` 是**自己**的，`peers[].token` 存的是**对端**的——配对时自动交换，手写时把对方的 token 填进去即可。
 
@@ -248,6 +290,10 @@ Get-Content ~/.dsh/peer-sync/status.json -Encoding utf8
 curl.exe -H "x-peer-token: <token>" http://10.77.0.1:4400/v1/hello
 ```
 
+`/v1/hello` 和 `/v1/status` 都带 `build`（插件 `package.json` 的版本）。两边行为不一致时**先看这个**：一边是新代码、一边是旧代码，表现出来的每个"协议 bug"其实都是版本不一致。
+
+改完插件代码不用重启 dsh——往 `~/.dsh/profiles/<name>/cordis.patch.yml` 末尾追加一行注释，文件变动会触发 profile 重载，插件连同 `lib/*.js` 一起重新 import（约 2–5 秒）。改完再 `curl /v1/hello` 看 `build` 变了没有，就知道新代码上没上。
+
 日志：`~/.dsh/peer-sync/sync.log`（UTF-8，PowerShell 读取请加 `-Encoding utf8`）。
 无 token 的请求一律 401。
 
@@ -255,7 +301,7 @@ curl.exe -H "x-peer-token: <token>" http://10.77.0.1:4400/v1/hello
 
 - 插件集只做"补齐"，不做"移除"；`link:`/本地路径的包只能在目标机手动装（`dsh-peer-sync` 自己就属于这类）。
 - 删除不同步：一边删掉一个 preset 或项目文件，另一边不会跟着删（没有墓碑记录）。
-- `cordis.patch.yml` 是整文件合并，不是按 entry 合并。两条 entry 分别在两台机器上改、且时间戳几乎相同时，会以整文件为单位二选一（落败版本有副本）。
+- 远程投递只能投给**已经存在**的会话，不能远程新建会话；对面卡住也没有远程取消/重跑的接口，只能那台机器上的人处理。
 - 只同步 profile patch，不同步 `$DSH_HOME/cordis.patch.yml`（home 层 patch）。
 - 项目同步是"逐文件镜像"而不是真合并：两边同时改同一个代码文件时不会做三方合并，只会留副本。代码项目将来更合适的做法是 git（见下）。
 - 超过 1 MB 的项目文件会被跳过（只记状态，不报错）。
