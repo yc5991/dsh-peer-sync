@@ -144,6 +144,11 @@ curl.exe -X POST http://10.77.0.2:4399/v1/remote/prompt `
 | `queued: true`、`reason: "agent-busy"` | 对面本来就有没结束的回合（`busyBefore: true`），你这条排队 | 等，或稍后重投 |
 | `blocked: "awaiting-owner-approval"` | 回合卡在**拥有方审批**上，`approval` 带 `id`/`tool`/`reason` | **等多久都没用**，得那台机器上的人点一下 |
 | `reason: "turn-in-progress"` | 回合在跑，预算内没答完 | 加大 `waitSeconds` 再等 |
+| `reason: "turn-ended-without-reply"` | 回合已经结束，但没产出任何文字（被中断，或只调用了工具） | 不用再等；看日志或重新投一条 |
+
+等待循环只看**最新的、有文字的** assistant 消息：只带 `tool/call` 的消息不是答案，继续等。这一点曾经写错过——把"看见 `assistant/message`"当成答完，于是每个用工具的回合都在第一次轮询就误报"还在跑"。
+
+另外，回合一旦 `turn/end`，两次轮询内就提前返回 `turn-ended-without-reply`，不会把预算耗在"已经不会有答案"的回合上。实测：一条 `sleep 45` 的任务在第 7 秒被中断，调用方 **8.5 秒**就拿到这个 reason，而不是等满 120 秒。
 
 审批这一档不是猜出来的：`approval/asked` 之后没有配对的 `approval/decided`（`approval/policy`、`approval/cancelled` 会一次性清空）就是挂着。连续两次轮询都挂着就提前返回，不把预算耗在等一个人上。实测对面卡过 8 小时 19 分，审批框一直没人点——远程这侧原本只能看到"没回话"，看不出是这个原因。
 

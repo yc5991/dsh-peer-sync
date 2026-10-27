@@ -131,11 +131,13 @@ flowchart TD
   D -- "否" --> D1["403 remote-prompts-disabled"]
   D -- "是" --> E["follow 探针<br/>cursor + busyBefore"]
   E --> F["controller.prompt → accepted<br/>requestId 是幂等键"]
-  F --> G{"窗口里有 assistant/message?"}
+  F --> G{"最新的「有文字」的回答出现了吗?<br/>只有 tool/cail 的 assistant 消息不算"}
   G -- "是" --> G1["replied: true + reply"]
   G -- "否" --> H{"有未配对的 approval/asked?"}
   H -- "是" --> H1["blocked = awaiting-owner-approval<br/>远程无法推进"]
-  H -- "否" --> I{"看到 turn/start?"}
+  H -- "否" --> J{"回合已经 turn/end 了吗?"}
+  J -- "是" --> J1["reason = turn-ended-without-reply"]
+  J -- "否" --> I{"看到 turn/start?"}
   I -- "没看见且对面忙" --> I1["queued + reason=agent-busy"]
   I -- "看见了但没答完" --> I2["reason=turn-in-progress"]
 ```
@@ -157,6 +159,7 @@ flowchart TD
 | 会话生命周期（建/投/中断/归档） | 已实测 | 面板建到对端 → 投入 `NEW-REMOTE-OK`；中断 → `turn/end`；归档本机通 |
 | 在对端归档（跨机） | 已实测 | 我的面板归档她的 `d7e8bd03` → `archived:true` |
 | 预算到期后取回答案 | 已实测 | 1 秒预算 → `turn-in-progress`；8 秒后 `/v1/remote/result` 拿到正文 |
+| 结束即返回 | 已实测 | `sleep 45` 任务第 7 秒被中断，调用方 8.5 秒拿到 `turn-ended-without-reply` |
 | 通告缓存的水合 | 已实测 | 撤销对端（不再有 hello）+ 重载 → 面板仍有 10 条，只能来自 `advert.json` |
 | 建会话自动命名 | 已实测 | 她的入站回 `title: "来自 win 的会话"`，投影与通告都非空 |
 

@@ -165,6 +165,7 @@ window.__ModuleLoader__.load({
       'agent-busy': ['对端前面还有一个回合在跑，这条排在它后面', 'a turn is already running there; this one is queued'],
       'awaiting-owner-approval': ['对端卡在一个需要本机批准的审批上，等多久都不会动', 'blocked on an approval only the owner can click'],
       'turn-in-progress': ['对端还在跑，等待上限到了', 'still running when the wait budget expired'],
+      'turn-ended-without-reply': ['对端那个回合结束了但没说话（可能被中断，或只调用了工具）', 'the turn ended without text (cancelled, or tools only)'],
       'not-started': ['对端收到了，但没有开回合', 'accepted, but no turn started'],
       'remote-prompts-disabled': ['对端没有允许远程投递（remotePrompts）', 'the peer does not allow remote prompts'],
       'peer-revoked': ['这个对端已被撤销，先恢复信任', 'this peer is revoked; restore trust first'],
