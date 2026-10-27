@@ -168,7 +168,11 @@ window.__ModuleLoader__.load({
       }
       const reason = value.reason || (value.ok ? 'unknown' : 'failed')
       const note = value.hint || value.message || ''
-      return h('p', { style: S.warn }, `${reason}${note ? ` · ${note}` : ''}`)
+      // When a turn is stuck on an approval, which tool it wants is the only part
+      // of the story the person who has to click it does not already know.
+      const approval = value.approval && value.approval.tool ? value.approval : null
+      const tool = approval ? `${approval.tool}${approval.id ? ` (${String(approval.id).slice(0, 8)})` : ''}` : ''
+      return h('p', { style: S.warn }, `${reason}${tool ? ` · ${tool}` : ''}${note ? ` · ${note}` : ''}`)
     }
 
     function SessionRow(props) {

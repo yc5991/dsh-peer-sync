@@ -124,9 +124,9 @@ flowchart TD
 | 面板投递（同源接口） | 已实测 | `/api/peer-sync/prompt` → `PANEL-OK`，19.3 秒 |
 | v2 双向发密钥 | 已实测 | 2026-10-27 13:25 重配对，两侧密钥对称 |
 | 撤销 → 403 + 停联 | 已实测 | 真实对端：`403 peer-revoked`、`/dav` 同拒、`lastSyncAt` 冻结，恢复后立刻续传 |
-| 审批阻塞 `blocked` | 部分 | 只有事件序列单测（`test/approval.mjs`） |
+| 审批阻塞 `blocked` | 已实测 | 真机演练：2.4 秒返回（两次轮询判定），带 `tool` 与审批 id，不耗满预算 |
 | DAV 挂载 + 断线探测 | 已实测 | macOS `mounted:true, entries:2`；`ENOENT` 分支本机验过 |
-| 设置面板渲染 | 部分 | 渲染树单测（`test/panel.mjs`）；浏览器未看（GUI 对匿名请求 401） |
+| 设置面板渲染 | 已实测 | 真机面板已渲染可用；之前的空态是 `tapIndex` 注入不到页面，改成面板自己取 |
 | 远程新建会话 | 部分 | 入站 `POST /v1/remote/session` → 200 + sessionId、错 token 401；跨机组合待对端 0.6.0 |
 
 ## 三条设计取舍
