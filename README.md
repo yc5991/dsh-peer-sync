@@ -164,6 +164,21 @@ curl.exe -X POST http://10.77.0.2:4399/v1/remote/session `
 
 对端若是低于 0.6.0 的版本，会回 `reason: "not-found"` —— 那个版本还没有这条路由。
 
+### 中断对端的回合（`/v1/remote/cancel`）
+
+一个卡在审批上的回合不会自己结束，而"发现它卡住了"的人在这台机器上。`POST /v1/remote/cancel` 补上出口：
+
+```powershell
+curl.exe -X POST http://10.77.0.2:4399/v1/remote/cancel `
+  -H "x-peer-token: <对端 token>" -H "content-type: application/json" `
+  -d '{"sessionId":"session-…"}'
+# -> {"ok":true,"sessionId":"session-…","shape":"object","value":{"accepted":true}}
+```
+
+实机验证过的效果：一个挂着 `approval/asked` 的回合被撤销后，事件序列出现 `approval/decided` → `tool/result` → `step/end` → `turn/end`，会话随即可以归档（`the session is active (turn)` 那条拒绝消失）。面板上每个对端会话都有「中断对端回合」。
+
+入站同样受 `remotePrompts: "allow"` 管；`reason` 会写进日志，方便事后分辨是谁按的停止。低于 0.7.0 的对端回 `reason: "not-found"`。
+
 ## 版本与冲突
 
 `cordis.patch.yml` **按条目合并**，不是整文件覆盖：

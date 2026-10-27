@@ -155,6 +155,16 @@ function panelApi(engine, ctx) {
         return
       }
 
+      if (req.method === 'POST' && route === '/cancel') {
+        const body = await readJsonBody(req)
+        // With a peer, cancel over there; without one, cancel here.
+        const answer = body && body.peer
+          ? await engine.remoteCancelSession(body.peer, body.sessionId)
+          : await engine.cancelSession(body && body.sessionId, body && body.reason)
+        sendJson(res, 200, answer)
+        return
+      }
+
       sendJson(res, 404, { ok: false, reason: 'unknown-route' })
     } catch (error) {
       engine.log.warn(`panel api ${req.method} ${req.url} failed: ${error && error.message ? error.message : error}`)

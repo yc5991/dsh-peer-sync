@@ -168,6 +168,11 @@ window.__ModuleLoader__.load({
       }
       const reason = value.reason || (value.ok ? 'unknown' : 'failed')
       const note = value.hint || value.message || ''
+      // A cancel answers `{ok, accepted}` with no reason: reporting "unknown" for
+      // a request that worked is worse than saying it was accepted.
+      if (value.ok && !value.replied && !value.reason) {
+        return h('p', { style: S.hint }, L('对端已受理', 'Accepted by the peer'))
+      }
       // When a turn is stuck on an approval, which tool it wants is the only part
       // of the story the person who has to click it does not already know.
       const approval = value.approval && value.approval.tool ? value.approval : null
@@ -181,6 +186,25 @@ window.__ModuleLoader__.load({
       const [text, setText] = useState('')
       const [pending, setPending] = useState(false)
       const [result, setResult] = useState(null)
+      const [stopping, setStopping] = useState(false)
+
+      const stop = async () => {
+        if (stopping) return
+        setStopping(true)
+        setResult(null)
+        try {
+          const value = await api('/cancel', {
+            method: 'POST',
+            body: JSON.stringify({ peer: item.peer, sessionId: item.id }),
+          })
+          setResult(value)
+          if (props.onChanged) props.onChanged()
+        } catch (error) {
+          setResult({ ok: false, reason: 'network-error', message: String((error && error.message) || error) })
+        } finally {
+          setStopping(false)
+        }
+      }
 
       const send = async () => {
         if (pending || !text.trim()) return
@@ -221,6 +245,13 @@ window.__ModuleLoader__.load({
             'button',
             { type: 'button', style: S.button, onClick: () => setOpen(!open), disabled: item.archived },
             open ? L('收起', 'Close') : L('在这里发一句', 'Send a message'),
+          ),
+          // A turn stuck on an approval never finishes on its own, and the person
+          // who notices is here, not there.
+          h(
+            'button',
+            { type: 'button', style: S.button, disabled: item.archived || stopping, onClick: stop },
+            stopping ? L('中断中…', 'Stopping…') : L('中断对端回合', 'Stop that turn'),
           ),
           open
             ? h(
