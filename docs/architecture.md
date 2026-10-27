@@ -17,8 +17,8 @@ python docs\render-flow.py           # -> docs/flow.png
 
 | 文件 | 负责 | 关键导出 |
 | --- | --- | --- |
-| `index.js` | 生命周期：`ctx.effect` 里起停引擎，把面板快照注入设置页 | `apply` |
-| `lib/sync.js` | 同步引擎：15 秒 tick、握手比较、三方合并、远程投递、状态文件 | `SyncEngine`、`mergeSessionList`、`openApproval`、`turnOpen`、`sessionsPublished` |
+| `index.js` | 生命周期、面板接口 `/api/peer-sync/*`（同源，loopback） | `apply` |
+| `lib/sync.js` | 同步引擎：15 秒 tick、握手比较、三方合并、远程投递、建会话、状态文件 | `SyncEngine`、`mergeSessionList`、`openApproval`、`replyFromWindow`、`turnOpen`、`sessionsPublished`、`remoteSessionsAllowed` |
 | `lib/http.js` | 对端通道：`/v1/*`（头令牌）+ `/dav`（Basic），两者共用同一套凭据判定 | `startServer` |
 | `lib/config.js` | 本机配置：默认值、规范化、信任判定 | `loadConfig`、`saveConfig`、`trustOf`、`identifyPeer` |
 | `lib/units.js` | 同步单元：patch / presets / credentials / 项目文件的收集与哈希 | `collectUnits`、`unitFromId`、`manifestOf` |
@@ -31,7 +31,28 @@ python docs\render-flow.py           # -> docs/flow.png
 | `lib/json.js` | 尽力而为的 JSON 读取（不因半截文件炸掉同步） | `readJson` |
 | `lib/paths.js` | 所有路径解析（`~` 展开、profile 目录、状态目录） | `dshHome`、`patchPath`、`localDir` … |
 | `lib/services.js` | 软服务查找：`ctx.get(name)`，没有 `inject` 也不抛 | `serviceOf` |
-| `client.js` | 设置面板：对端、插件集、会话（远程/镜像）、挂载状态 | — |
+| `client.js` | 设置面板：对端、插件集、会话（远程/镜像）、挂载状态、发消息、建会话、撤销 | — |
+
+## 两条通道，两套凭据
+
+同源接口（GUI 服务器，loopback）与对端接口（直连监听器，头令牌）是**分开的**——把 token 放进页面等于给浏览器开后门，所以浏览器永远走左边这列：
+
+| 接口 | 位置 | 认证 | 用途 |
+| --- | --- | --- | --- |
+| `GET /api/peer-sync/snapshot` | GUI 服务器 | loopback | 面板读快照（不再依赖注入） |
+| `POST /api/peer-sync/prompt` | GUI 服务器 | loopback | 面板 → 对端会话投递 |
+| `POST /api/peer-sync/session/remote` | GUI 服务器 | loopback | 面板 → 对端新建会话 |
+| `POST /api/peer-sync/session/new` | GUI 服务器 | loopback | 本机新建会话 |
+| `POST /api/peer-sync/trust` | GUI 服务器 | loopback | 撤销 / 恢复对端 |
+| `GET /api/peer-sync/introspect` | GUI 服务器 | loopback | 只读：查宿主服务的方法与元数（白名单） |
+| `POST /v1/pair` | 对端监听器 | 配对策略 | 交换每对一枚密钥 |
+| `GET /v1/hello` | 对端监听器 | 头令牌 / 专用密钥 | 单元清单 + 会话通告 + `build` |
+| `POST /v1/remote/prompt` | 对端监听器 | 同上 + `remotePrompts: allow` | 投递并等待回话 |
+| `POST /v1/remote/session` | 对端监听器 | 同上 + `remotePrompts: allow` | 让对端建会话 |
+| `GET /v1/session` | 对端监听器 | 同上 + 会话已通告 | 取会话日志（只读） |
+| `/dav` | 对端监听器 | HTTP Basic（密码=凭据） | 挂载共享目录 |
+
+同源那一列**没有额外令牌**：同机上任何进程都能调，和它能直接读 `config.json` 同级。这是取舍，不是遗漏。
 
 ## 组件图（同 architecture.png）
 
