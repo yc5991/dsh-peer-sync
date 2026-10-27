@@ -149,6 +149,12 @@ function panelApi(engine, ctx) {
         return
       }
 
+      if (req.method === 'POST' && route === '/session/archive') {
+        const body = await readJsonBody(req)
+        sendJson(res, 200, await engine.archiveSession(body.sessionId))
+        return
+      }
+
       sendJson(res, 404, { ok: false, reason: 'unknown-route' })
     } catch (error) {
       engine.log.warn(`panel api ${req.method} ${req.url} failed: ${error && error.message ? error.message : error}`)
