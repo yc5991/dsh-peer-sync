@@ -248,6 +248,8 @@ WARN  [peer-sync] mount /Volumes/dav is not readable (ENOENT) — remount it fro
 
 不自动重挂是有意的：重挂要过系统凭据框，从插件里驱动它正是把 NetAuthAgent 队列搞死的方式（我们踩过）。恢复用 Finder 重连，或之前那条 `osascript … as user name … with password …`。
 
+读 `status.json` 要注意 `dav.at` 的含义：它只在 `writeStatus()` 被调用时推进，而那由 15 秒的 tick 驱动、探测自身又限流 30 秒。**两次采样之间 `at` 落后几十秒是正常的，不代表探测死了**；只有整个 `dav` 字段为 `null` 才说明 `watchMount` 没生效（配置为空，或没被读到）。
+
 改完重载插件，日志里会出现：
 
 ```
