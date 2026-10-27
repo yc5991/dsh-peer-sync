@@ -67,6 +67,24 @@ window.__ModuleLoader__.load({
         background: 'var(--dsw-alias-bg-layer-2)',
         color: 'var(--dsw-alias-label-secondary)',
       },
+      chip: {
+        border: '1px solid var(--dsw-alias-border-l2)',
+        background: 'transparent',
+        color: 'var(--dsw-alias-label-secondary)',
+        borderRadius: 999,
+        padding: '2px 10px',
+        fontSize: 12,
+        cursor: 'pointer',
+      },
+      chipOn: {
+        border: '1px solid var(--dsw-alias-state-success-primary)',
+        background: 'var(--dsw-alias-bg-layer-2)',
+        color: 'var(--dsw-alias-label-primary)',
+        borderRadius: 999,
+        padding: '2px 10px',
+        fontSize: 12,
+        cursor: 'pointer',
+      },
       textarea: {
         width: '100%',
         boxSizing: 'border-box',
@@ -176,6 +194,7 @@ window.__ModuleLoader__.load({
       'empty-text': ['没有内容可发', 'nothing to send'],
       'archive-failed': ['对端拒绝归档（回合进行中的会话不能归档）', 'the peer refused to archive it (a running turn blocks it)'],
       'unarchive-failed': ['对端拒绝取消归档', 'the peer refused to unarchive it'],
+      'not-archived': ['那个会话本来就没归档（或不存在）', 'that session is not archived, or does not exist'],
       'not-live': ['那台没有正在跑的回合（会话未附着），不需要中断', 'that session has no running turn in memory'],
       'cancel-failed': ['对端拒绝中断', 'the peer refused to cancel'],
       'read-failed': ['读不到那个会话（不存在或没附着）', 'could not read that session'],
@@ -510,11 +529,29 @@ window.__ModuleLoader__.load({
       )
     }
 
+    /**
+     * Which rows the list shows. Archived sessions were always mixed in with the
+     * live ones, and with ten rows that is half the list spent on sessions that
+     * cannot be messaged — so the default view leaves them out.
+     */
+    const FILTERS = [
+      { id: 'active', cn: '未归档', en: 'active' },
+      { id: 'mirrored', cn: '有镜像', en: 'mirrored' },
+      { id: 'all', cn: '全部', en: 'all' },
+    ]
+
+    function filterItems(items, filter) {
+      if (filter === 'mirrored') return items.filter((item) => item.mirrored && !item.archived)
+      if (filter === 'all') return items
+      return items.filter((item) => !item.archived)
+    }
+
     function Panel() {
       const injected = typeof window === 'undefined' ? null : window.__DSH_PEER_SYNC__
       const [data, setData] = useState(injected)
       const [refreshing, setRefreshing] = useState(!injected)
       const [failure, setFailure] = useState(null)
+      const [filter, setFilter] = useState('active')
 
       // The page carries one snapshot; every write path re-reads it instead of
       // patching local state, so what the panel shows is what the engine has.
@@ -570,6 +607,14 @@ window.__ModuleLoader__.load({
       const bundles = data.bundles || {}
       const sessions = data.sessions || { items: [] }
       const units = data.units || { count: 0, ids: [] }
+      const items = Array.isArray(sessions.items) ? sessions.items : []
+      const visible = filterItems(items, filter)
+      const shown = visible.slice(0, 8)
+      const counts = {
+        active: items.filter((item) => !item.archived).length,
+        mirrored: items.filter((item) => item.mirrored && !item.archived).length,
+        all: items.length,
+      }
 
       return h(
         'div',
@@ -642,12 +687,32 @@ window.__ModuleLoader__.load({
                   ),
                 ),
                 h(
+                  'div',
+                  { style: S.row },
+                  ...FILTERS.map((entry) =>
+                    h(
+                      'button',
+                      {
+                        key: entry.id,
+                        type: 'button',
+                        style: entry.id === filter ? S.chipOn : S.chip,
+                        onClick: () => setFilter(entry.id),
+                      },
+                      `${L(entry.cn, entry.en)} (${counts[entry.id]})`,
+                    ),
+                  ),
+                  shown.length < visible.length
+                    ? h('span', { style: S.dim }, L(`另有 ${visible.length - shown.length} 条被折起`, `${visible.length - shown.length} hidden`))
+                    : null,
+                ),
+                h(
                   'ul',
                   { style: S.list },
-                  sessions.items
-                    .slice(0, 8)
-                    .map((item) => h(SessionRow, { key: item.id, item, onChanged: refresh })),
+                  shown.map((item) => h(SessionRow, { key: item.id, item, onChanged: refresh })),
                 ),
+                shown.length === 0
+                  ? h('p', { style: S.hint }, L('这个过滤下没有会话。', 'Nothing matches this filter.'))
+                  : null,
                 sessions.truncated
                   ? h('p', { style: S.hint }, L(`只列出前 ${sessions.items.length} 条。`, `Showing the first ${sessions.items.length}.`))
                   : null,

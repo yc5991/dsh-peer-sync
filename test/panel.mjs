@@ -64,6 +64,9 @@ function renderPanel(data, options = {}) {
     },
     useState(initial) {
       const value = typeof initial === 'function' ? initial() : initial
+      // The filter is the only string state; letting a render choose it is how
+      // the archived-row branch gets covered without a browser.
+      if (options.filter && value === 'active') return [options.filter, () => {}]
       return [openState && value === false ? true : value, () => {}]
     },
     useCallback(fn) {
@@ -132,10 +135,13 @@ const collapsed = renderPanel(snapshot).text
 assert.match(collapsed, /远程 · mac-lan/, 'each session row says which machine runs it')
 assert.match(collapsed, /问候/, 'titles survive to the panel')
 assert.match(collapsed, /已镜像/, 'a mirrored copy is labelled')
-assert.match(collapsed, /已归档/, 'an archived session is labelled')
 assert.match(collapsed, /在这里发一句/, 'the collapsed row offers the composer')
 assert.match(collapsed, /看最近结果/, 'and a way to peek at the last answer without sending')
-assert.match(collapsed, /取消归档/, 'an archived session offers to come back')
+assert.match(collapsed, /未归档/, 'the list can be filtered to live sessions')
+assert.match(collapsed, /有镜像/, 'and to the ones with a local copy')
+assert.match(collapsed, /全部/, 'and back to everything')
+// Default view is "active": the archived fixture row must not be listed.
+assert.doesNotMatch(collapsed, /\(无标题\)/, 'archived rows are hidden by default')
 assert.match(collapsed, /build 0\.8\.3/, 'the peer build is on the card, not in a round trip')
 assert.match(collapsed, /中断对端回合/, 'and a way to stop a turn stuck over there')
 assert.match(collapsed, /撤销/, 'a trusted peer can be revoked')
@@ -144,6 +150,11 @@ assert.match(collapsed, /共享挂载/, 'the mount section renders when a mount 
 assert.match(collapsed, /可读/, 'the mount verdict reaches the page')
 assert.match(collapsed, /cross-machine|对端/, 'peers section renders')
 assert.doesNotMatch(collapsed, /undefined|NaN|\[object Object\]/, 'no placeholder leaks into the page')
+
+// …and with the "all" filter the archived row comes back, label and all.
+const everyone = renderPanel(snapshot, { filter: 'all' }).text
+assert.match(everyone, /已归档/, 'an archived session is labelled when shown')
+assert.match(everyone, /取消归档/, 'an archived session offers to come back')
 
 // Every false state flipped: the composer is open and the send button is busy.
 const open = renderPanel(snapshot, { open: true }).text
@@ -170,4 +181,4 @@ assert.match(empty, /正在从本机读取状态|没拿到状态/, 'the empty st
 assert.match(empty, /读取中…|重新读取/, 'and offers the read action')
 assert.doesNotMatch(empty, /没有注入状态/, 'no longer blames the host for a fixable case')
 
-console.log('panel: 4 renders ok')
+console.log('panel: ok')
