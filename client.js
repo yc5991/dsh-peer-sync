@@ -154,6 +154,35 @@ window.__ModuleLoader__.load({
       return value
     }
 
+    /**
+     * What a non-reply outcome means for the person looking at it.
+     *
+     * The API's `hint` is written for a caller and stays English; this table is
+     * for the person who has to decide what to do next, and falls through to the
+     * raw reason plus the server hint when the case is not known here.
+     */
+    const REASONS = {
+      'agent-busy': ['对端前面还有一个回合在跑，这条排在它后面', 'a turn is already running there; this one is queued'],
+      'awaiting-owner-approval': ['对端卡在一个需要本机批准的审批上，等多久都不会动', 'blocked on an approval only the owner can click'],
+      'turn-in-progress': ['对端还在跑，等待上限到了', 'still running when the wait budget expired'],
+      'not-started': ['对端收到了，但没有开回合', 'accepted, but no turn started'],
+      'remote-prompts-disabled': ['对端没有允许远程投递（remotePrompts）', 'the peer does not allow remote prompts'],
+      'peer-revoked': ['这个对端已被撤销，先恢复信任', 'this peer is revoked; restore trust first'],
+      'not-found': ['对端版本太旧，没有这条路由', 'the peer build has no such route'],
+      'request-failed': ['请求没到对端或超时', 'the request did not reach the peer'],
+      'unknown-peer': ['没有这个对端', 'no such peer'],
+      'missing-session': ['没有指定会话', 'no session given'],
+      'empty-text': ['没有内容可发', 'nothing to send'],
+      'archive-failed': ['对端拒绝归档（回合进行中的会话不能归档）', 'the peer refused to archive it (a running turn blocks it)'],
+      'cancel-failed': ['对端拒绝中断', 'the peer refused to cancel'],
+      'create-failed': ['对端建会话失败', 'the peer could not create the session'],
+    }
+
+    function explain(reason) {
+      const pair = REASONS[reason]
+      return pair ? L(pair[0], pair[1]) : reason
+    }
+
     /** One line of truth about a delivered prompt, whatever came back. */
     function Outcome(props) {
       const value = props.value
@@ -167,7 +196,6 @@ window.__ModuleLoader__.load({
         )
       }
       const reason = value.reason || (value.ok ? 'unknown' : 'failed')
-      const note = value.hint || value.message || ''
       // A cancel answers `{ok, accepted}` with no reason: reporting "unknown" for
       // a request that worked is worse than saying it was accepted.
       if (value.ok && !value.replied && !value.reason) {
@@ -177,7 +205,14 @@ window.__ModuleLoader__.load({
       // of the story the person who has to click it does not already know.
       const approval = value.approval && value.approval.tool ? value.approval : null
       const tool = approval ? `${approval.tool}${approval.id ? ` (${String(approval.id).slice(0, 8)})` : ''}` : ''
-      return h('p', { style: S.warn }, `${reason}${tool ? ` · ${tool}` : ''}${note ? ` · ${note}` : ''}`)
+      const known = REASONS[reason]
+      const raw = known ? '' : ` · ${reason}`
+      const note = value.hint || value.message || ''
+      return h(
+        'p',
+        { style: S.warn },
+        `${explain(reason)}${tool ? ` · ${tool}` : ''}${raw}${note && !known ? ` · ${note}` : ''}`,
+      )
     }
 
     function SessionRow(props) {
