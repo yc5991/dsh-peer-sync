@@ -51,9 +51,9 @@ def arrow(x1, y1, x2, y2, color="#7A8494", width=2, head=9):
         d.polygon([(x2, y2), (x2 - head, y2 - head // 2), (x2 - head, y2 + head // 2)], fill=color)
 
 
-text(56, 40, "dsh-peer-sync 0.5.0", 32, INK, bold=True)
+text(56, 40, "dsh-peer-sync 0.8.0", 32, INK, bold=True)
 text(56, 84, "两台 DSH 通过直连网线互通：配置同步、会话可见、远程投递、项目挂载", 17, MUTED)
-text(W - 56, 46, "0.5.0 · 2026-10-27", 15, MUTED, anchor="ra")
+text(W - 56, 46, "0.8.0 · 2026-10-27", 15, MUTED, anchor="ra")
 
 # ---------------------------------------------------------------- two engines
 COL_W = 640
@@ -148,8 +148,7 @@ ROWS = [
     ("审批阻塞 blocked", "真机演练：2.4s 返回，带工具名与审批 id", DONE),
     ("DAV 挂载 + 断线探测", "macOS mounted:true, entries:2", DONE),
     ("设置面板渲染", "真机面板已渲染（用户确认）", DONE),
-    ("会话生命周期（建/投/中断/归档）", "建→投→NEW-REMOTE-OK；中断→turn/end；归档本机通", DONE),
-    ("在对端归档（跨机）", "mac-lan 归档 d7e8bd03 → archived:true", DONE),
+    ("会话生命周期（建/投/中断/归档）", "建→投 NEW-REMOTE；跨机归档 d7e8bd03 成功", DONE),
     ("预算到期后取回答案", "1s 预算 → 8s 后 /result 拿到正文", DONE),
 ]
 
