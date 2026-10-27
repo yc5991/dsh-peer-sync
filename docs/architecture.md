@@ -41,14 +41,20 @@ python docs\render-flow.py           # -> docs/flow.png
 | --- | --- | --- | --- |
 | `GET /api/peer-sync/snapshot` | GUI 服务器 | loopback | 面板读快照（不再依赖注入） |
 | `POST /api/peer-sync/prompt` | GUI 服务器 | loopback | 面板 → 对端会话投递 |
-| `POST /api/peer-sync/session/remote` | GUI 服务器 | loopback | 面板 → 对端新建会话 |
+| `POST /api/peer-sync/result` | GUI 服务器 | loopback | 预算到期后取回答案（带 `peer` 走对端，不带走本机） |
+| `POST /api/peer-sync/cancel` | GUI 服务器 | loopback | 中断回合（带 `peer` 走对端，不带走本机） |
 | `POST /api/peer-sync/session/new` | GUI 服务器 | loopback | 本机新建会话 |
+| `POST /api/peer-sync/session/remote` | GUI 服务器 | loopback | 面板 → 对端新建会话 |
+| `POST /api/peer-sync/session/archive` | GUI 服务器 | loopback | 归档（带 `peer` 走对端，不带走本机） |
 | `POST /api/peer-sync/trust` | GUI 服务器 | loopback | 撤销 / 恢复对端 |
 | `GET /api/peer-sync/introspect` | GUI 服务器 | loopback | 只读：查宿主服务的方法与元数（白名单） |
 | `POST /v1/pair` | 对端监听器 | 配对策略 | 交换每对一枚密钥 |
 | `GET /v1/hello` | 对端监听器 | 头令牌 / 专用密钥 | 单元清单 + 会话通告 + `build` |
 | `POST /v1/remote/prompt` | 对端监听器 | 同上 + `remotePrompts: allow` | 投递并等待回话 |
+| `GET /v1/remote/result` | 对端监听器 | 同上 + `remotePrompts: allow` | 只读：这个会话的回合产出到哪了 |
+| `POST /v1/remote/cancel` | 对端监听器 | 同上 + `remotePrompts: allow` | 中断正在跑的回合 |
 | `POST /v1/remote/session` | 对端监听器 | 同上 + `remotePrompts: allow` | 让对端建会话 |
+| `POST /v1/remote/session/archive` | 对端监听器 | 同上 + `remotePrompts: allow` | 让对端归档会话 |
 | `GET /v1/session` | 对端监听器 | 同上 + 会话已通告 | 取会话日志（只读） |
 | `/dav` | 对端监听器 | HTTP Basic（密码=凭据） | 挂载共享目录 |
 
