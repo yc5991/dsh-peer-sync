@@ -127,7 +127,13 @@ function panelApi(engine, ctx) {
 
       if (req.method === 'POST' && route === '/prompt') {
         const body = await readJsonBody(req)
-        sendJson(res, 200, await engine.promptPeer(body.peer, body.sessionId, body.text, body.wait !== false, body.waitSeconds))
+        // With a peer, deliver over there; without one, deliver here. Every other
+        // write route already works that way, and this one silently picking the
+        // only peer made "prompt into a local session" impossible to express.
+        const answer = body && body.peer
+          ? await engine.promptPeer(body.peer, body.sessionId, body.text, body.wait !== false, body.waitSeconds)
+          : await engine.remotePrompt(body && body.sessionId, body && body.text, body.wait !== false, body && body.waitSeconds)
+        sendJson(res, 200, answer)
         return
       }
 
