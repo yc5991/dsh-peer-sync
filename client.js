@@ -185,6 +185,21 @@ window.__ModuleLoader__.load({
       return pair ? L(pair[0], pair[1]) : reason
     }
 
+    /**
+     * Give a `/result` answer the same shape as a `/prompt` answer.
+     *
+     * The result route answers `{replied, running, blocked}` without a `reason`,
+     * because "why" is a property of the wait, not of the read. The panel still
+     * has to say something, so the three cases are named here once.
+     */
+    function asOutcome(value) {
+      if (!value || value.replied || value.reason) return value
+      return {
+        ...value,
+        reason: value.blocked ? 'awaiting-owner-approval' : value.running ? 'turn-in-progress' : 'not-started',
+      }
+    }
+
     /** One line of truth about a delivered prompt, whatever came back. */
     function Outcome(props) {
       const value = props.value
@@ -252,7 +267,7 @@ window.__ModuleLoader__.load({
             method: 'POST',
             body: JSON.stringify({ peer: item.peer, sessionId: item.id }),
           })
-          setResult(value)
+          setResult(asOutcome(value))
         } catch (error) {
           setResult({ ok: false, reason: 'network-error', message: String((error && error.message) || error) })
         }
@@ -279,10 +294,21 @@ window.__ModuleLoader__.load({
         setPending(true)
         setResult(null)
         try {
-          const value = await api('/prompt', {
+          let value = await api('/prompt', {
             method: 'POST',
             body: JSON.stringify({ peer: item.peer, sessionId: item.id, text, wait: true, waitSeconds: 120 }),
           })
+          // The 120s is this panel's budget, not the turn's. While the peer is
+          // still producing, come back for it instead of dumping the decision on
+          // the user: three reads, four seconds apart, then hand it over.
+          for (let attempt = 0; attempt < 3 && value && !value.replied && value.reason === 'turn-in-progress'; attempt += 1) {
+            await new Promise((resolve) => setTimeout(resolve, 4000))
+            const again = await api('/result', {
+              method: 'POST',
+              body: JSON.stringify({ peer: item.peer, sessionId: item.id }),
+            })
+            if (again) value = asOutcome(again)
+          }
           setResult(value)
           if (value && value.replied) setText('')
           if (props.onChanged) props.onChanged()

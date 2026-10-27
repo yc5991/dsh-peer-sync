@@ -10,7 +10,7 @@
 // belongs to a different approval.
 
 import assert from 'node:assert/strict'
-import { openApproval, replyFromWindow, turnOpen } from '../lib/sync.js'
+import { openApproval, promptWindow, replyFromWindow, turnOpen } from '../lib/sync.js'
 
 const asked = (seq, id, tool = 'bash') => ({ event: { type: 'approval/asked', seq, data: { id, toolName: tool, reason: 'escalate sandbox' } }, seq })
 const decided = (seq, id, outcome = 'allowed-once') => ({ event: { type: 'approval/decided', seq, data: { id, outcome } }, seq })
@@ -76,3 +76,23 @@ assert.equal(replyFromWindow([called(1), said(2, 'late')]), 'late')
 assert.equal(replyFromWindow([]), null)
 
 console.log('replyFromWindow: 6 cases ok')
+
+// The whole per-poll judgement, which is where the tool-call-only bug lived.
+const textWindow = [kind('turn/start', 1), said(2, 'done'), kind('turn/end', 3)]
+assert.deepEqual(
+  (({ reply, approval, sawStart, sawEnd }) => ({ reply, approval, sawStart, sawEnd }))(promptWindow(textWindow)),
+  { reply: 'done', approval: null, sawStart: true, sawEnd: true },
+)
+// The drill window: a step with a tool call, then the approval it triggered.
+const toolWindow = [kind('turn/start', 5), called(18), tool(19), drillAsked(20)]
+assert.equal(promptWindow(toolWindow).reply, null, 'a tool step is not an answer')
+assert.equal(promptWindow(toolWindow).approval.id, 'a1', 'the approval is what the window is stuck on')
+assert.equal(promptWindow(toolWindow).sawEnd, false, 'the turn is still open')
+// Once the approval is decided, the window is clean again.
+assert.equal(promptWindow([...toolWindow, { event: { type: 'approval/decided', seq: 22, data: { id: 'a1' } }, seq: 22 }]).approval, null)
+// A window that begins mid-turn still reports what it can see.
+assert.equal(promptWindow([called(1)]).sawStart, false)
+assert.equal(promptWindow([]).reply, null)
+assert.equal(promptWindow(null).replies, 0)
+
+console.log('promptWindow: 6 cases ok')

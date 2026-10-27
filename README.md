@@ -193,7 +193,7 @@ curl.exe -H "x-peer-token: <对端 token>" `
 # -> {"ok":true,"replied":true,"reply":"…","running":false,"lastSeq":19}
 ```
 
-它只读窗口、不投递：`running: true` 表示回合还在跑（过一会再来），`replied: true` 表示拿到答案，`blocked` 与投递接口同义。面板上，结果停在"还在跑"时会出现「再取一次结果」。
+它只读窗口、不投递：`running: true` 表示回合还在跑（过一会再来），`replied: true` 表示拿到答案，`blocked` 与投递接口同义。面板在预算到了之后会**自动再取三次**（每 4 秒一次），仍没拿到才把「再取一次结果」按钮交给你。
 
 实测：预算 1 秒 → `turn-in-progress`（1.2 秒返回）→ 3 秒后 `running:true` → 8 秒后 `replied:true` + 正文，会话随后归档。
 
