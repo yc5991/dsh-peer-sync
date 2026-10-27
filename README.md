@@ -149,6 +149,21 @@ curl.exe -X POST http://10.77.0.2:4399/v1/remote/prompt `
 
 面板里发消息走的是同一个端点，只是绕了一层同源接口（GUI 服务器 → 本机引擎 → 对端），所以回话的字段完全一样，`blocked` / `queued` 也照样显示。等待上限固定 120 秒，期间按钮显示"等待对端…"。
 
+### 在对端新建会话
+
+投递需要有一个会话可以投进去，而对端只有人点开过的会话才存在。`/v1/remote/session` 补上这一步：
+
+```powershell
+curl.exe -X POST http://10.77.0.2:4399/v1/remote/session `
+  -H "x-peer-token: <对端 token>" -H "content-type: application/json" `
+  -d '{"request":{}}'
+# -> {"ok":true,"sessionId":"session-…","created":{}}
+```
+
+`request` 支持 `cwd` 与 `agentPreset`，留空就用那台机器的默认目录、默认 preset。入站和投递用同一个开关（`remotePrompts: "allow"`）：两者都意味着"另一台可以动我的会话"，而新建会话是更侵入的那一半。面板上的「在对端新建会话」按钮就是这个调用；新会话要等对端下一次握手（≤15 秒）才会出现在列表里。
+
+对端若是低于 0.6.0 的版本，会回 `reason: "not-found"` —— 那个版本还没有这条路由。
+
 ## 版本与冲突
 
 `cordis.patch.yml` **按条目合并**，不是整文件覆盖：
@@ -348,7 +363,7 @@ curl.exe -H "x-peer-token: <token>" http://10.77.0.1:4400/v1/hello
 - 插件集只做"补齐"，不做"移除"；`link:`/本地路径的包只能在目标机手动装（`dsh-peer-sync` 自己就属于这类）。
 - 删除不同步：一边删掉一个 preset 或项目文件，另一边不会跟着删（没有墓碑记录）。
 - 远程投递只能投给**已经存在**的会话，不能远程新建会话；对面卡住也没有远程取消/重跑的接口，只能那台机器上的人处理。
-- 设置面板里的对端会话可以**直接发消息**：点「在这里发一句」、输入一行、发送，请求走 GUI 同源接口 `/api/peer-sync/prompt` → 对端 `/v1/remote/prompt`，在对端执行、把回话带回来。仍然**不能远程新建会话**，也没有远程取消。
+- 设置面板里的对端会话可以**直接发消息**：点「在这里发一句」、输入一行、发送，请求走 GUI 同源接口 `/api/peer-sync/prompt` → 对端 `/v1/remote/prompt`，在对端执行、把回话带回来。也能「在对端新建会话」（`/v1/remote/session`）。仍然**没有远程取消**，删会话也不在协议里。
 - 面板的写接口（`/api/peer-sync/prompt`、`/api/peer-sync/trust`）注册在 GUI 服务器上，不在对端监听器上：对端监听器只认 token，把 token 塞进页面等于给浏览器开后门。这两个接口只接受 loopback 来源，但**没有额外令牌**——同一台机器上的任何进程都能调用，和它能直接读 `config.json` 是同一级别。要跨机投递，用带 token 的 `/v1/remote/prompt`。
 - 撤销一台 peer 时，它手里的 WebDAV 挂载也一起被拒（`403`）——前提是那台用的是配对时发给它的专用密钥。用旧共享 token 挂上的要先重新配对（见「每对一个密钥」）。
 - `workspacesRemove` 不可靠：`registry.delete()` 会返回成功，但 Desktop shell 随后按内存回写状态、条目又回来了。所以代码会再列一次确认，确认不到就明说"删除未被确认，请手动移除"，不会谎报。

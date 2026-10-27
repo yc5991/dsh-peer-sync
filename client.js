@@ -256,6 +256,8 @@ window.__ModuleLoader__.load({
 
     function Peers(props) {
       const [busy, setBusy] = useState(null)
+      const [creating, setCreating] = useState(null)
+      const [created, setCreated] = useState(null)
 
       const toggle = async (peer) => {
         const next = peer.trust === 'revoked' ? 'explicit' : 'revoked'
@@ -265,6 +267,23 @@ window.__ModuleLoader__.load({
           if (props.onChanged) props.onChanged()
         } finally {
           setBusy(null)
+        }
+      }
+
+      // Creating the session over there is the one thing delivery cannot do for
+      // itself: a message needs a session to land in, and only that machine can
+      // make one.
+      const createThere = async (peer) => {
+        setCreating(peer.name)
+        setCreated(null)
+        try {
+          const value = await api('/session/remote', { method: 'POST', body: JSON.stringify({ peer: peer.name }) })
+          setCreated({ peer: peer.name, ...value })
+          if (props.onChanged) props.onChanged()
+        } catch (error) {
+          setCreated({ peer: peer.name, ok: false, reason: 'network-error', message: String((error && error.message) || error) })
+        } finally {
+          setCreating(null)
         }
       }
 
@@ -300,6 +319,20 @@ window.__ModuleLoader__.load({
               { style: S.row },
               h('span', { style: S.dim }, `${L('上次同步', 'last sync')} ${when(peer.lastSyncAt)}`),
               peer.lastError ? h('span', { style: S.dim }, peer.lastError) : null,
+              peer.trust === 'revoked'
+                ? null
+                : h(
+                    'button',
+                    {
+                      type: 'button',
+                      style: S.button,
+                      disabled: creating === peer.name || !peer.reachable,
+                      onClick: () => createThere(peer),
+                    },
+                    creating === peer.name
+                      ? L('正在对端创建…', 'Creating…')
+                      : L('在对端新建会话', 'New session there'),
+                  ),
               h(
                 'button',
                 {
@@ -315,6 +348,15 @@ window.__ModuleLoader__.load({
                     : L('撤销', 'Revoke'),
               ),
             ),
+            created && created.peer === (peer.name || null)
+              ? created.ok
+                ? h(
+                    'p',
+                    { style: S.hint },
+                    `${L('已在对端创建', 'Created on the peer')}: ${created.sessionId || '?'} · ${L('会话最多 15 秒后出现在下面（对端下次通告时）', 'it shows up below within 15s, on the next handshake')}`,
+                  )
+                : h('p', { style: S.warn }, `${created.reason || 'failed'}${created.message ? ` · ${created.message}` : ''}`)
+              : null,
           ),
         ),
       )

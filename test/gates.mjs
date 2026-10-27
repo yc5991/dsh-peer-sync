@@ -4,7 +4,7 @@
 // un-trusted, a panel that hid the peer's sessions when nothing was mirrored.
 
 import assert from 'node:assert/strict'
-import { mergeSessionList, sessionsPublished } from '../lib/sync.js'
+import { mergeSessionList, remoteSessionsAllowed, sessionsPublished } from '../lib/sync.js'
 import { identifyPeer, trustOf } from '../lib/config.js'
 import { titleFromSnapshot, titleOf } from '../lib/sessions.js'
 
@@ -15,6 +15,13 @@ assert.equal(sessionsPublished({ share: { sessions: false }, sync: { sessions: f
 assert.equal(sessionsPublished({ share: { sessions: true }, sync: { sessions: false } }), true)
 assert.equal(sessionsPublished({ share: { sessions: false }, sync: { sessions: true } }), true)
 assert.equal(sessionsPublished({ share: {}, sync: {} }), false)
+
+// --- who may create a session here: the same switch as delivery --------------
+assert.equal(remoteSessionsAllowed({ remotePrompts: 'allow' }), true)
+assert.equal(remoteSessionsAllowed({ remotePrompts: 'off' }), false)
+assert.equal(remoteSessionsAllowed({ remotePrompts: 'ask' }), false)
+assert.equal(remoteSessionsAllowed(null), false)
+assert.equal(remoteSessionsAllowed({}), false)
 
 // --- trust: two states, and anything unrecognised stays trusted --------------
 assert.equal(trustOf(null), 'explicit')
@@ -88,4 +95,4 @@ assert.deepEqual(ordered.map((row) => row.id), ['b', 'a'])
 // junk in the advert must be skipped, not thrown on
 assert.equal(mergeSessionList([{ title: 'no id' }, null], {}, 'p').length, 0)
 
-console.log('gates: 30 cases ok')
+console.log('gates: ok')

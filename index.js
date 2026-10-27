@@ -36,6 +36,44 @@ function sendJson(res, status, value) {
   res.end(body)
 }
 
+/**
+ * Shape of a host service, for deciding whether a feature can be built at all.
+ *
+ * The plugin soft-depends on services it does not inject (`sessionController`,
+ * `agents`, 鈥? and their signatures differ between harness versions. Rather than
+ * guess 鈥?twice now a guess cost a wrong implementation 鈥?this reports exactly
+ * what the running host exposes. Read-only, loopback only, fixed allowlist.
+ */
+const INTROSPECTABLE = new Set(['agents', 'agentLoop', 'sessionController', 'sessionQuery', 'workspaceRegistry', 'webServer'])
+
+function introspect(ctx, name) {
+  if (!INTROSPECTABLE.has(name)) return { ok: false, reason: 'not-allowed', allowed: [...INTROSPECTABLE] }
+  const service = serviceOf(ctx, name)
+  if (!service) return { ok: false, reason: 'absent' }
+  const keys = new Set()
+  for (let object = service, depth = 0; object && depth < 4; object = Object.getPrototypeOf(object), depth += 1) {
+    for (const key of Object.getOwnPropertyNames(object)) {
+      if (key !== 'constructor') keys.add(key)
+    }
+  }
+  const members = []
+  for (const key of [...keys].sort()) {
+    let value
+    try {
+      value = service[key]
+    } catch (error) {
+      members.push({ key, type: 'getter-threw', message: String((error && error.message) || error) })
+      continue
+    }
+    if (typeof value === 'function') {
+      members.push({ key, type: 'function', arity: value.length, async: value.constructor && value.constructor.name === 'AsyncFunction' })
+    } else {
+      members.push({ key, type: value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value })
+    }
+  }
+  return { ok: true, service: name, members }
+}
+
 function readJsonBody(req, limit = 256 * 1024) {
   return new Promise((resolve, reject) => {
     const chunks = []
@@ -65,7 +103,7 @@ function readJsonBody(req, limit = 256 * 1024) {
   })
 }
 
-function panelApi(engine) {
+function panelApi(engine, ctx) {
   return async (req, res) => {
     try {
       if (!loopbackOnly(req)) {
@@ -82,6 +120,11 @@ function panelApi(engine) {
         return
       }
 
+      if (req.method === 'GET' && route === '/introspect') {
+        sendJson(res, 200, introspect(ctx, url.searchParams.get('service') || ''))
+        return
+      }
+
       if (req.method === 'POST' && route === '/prompt') {
         const body = await readJsonBody(req)
         sendJson(res, 200, await engine.promptPeer(body.peer, body.sessionId, body.text, body.wait !== false, body.waitSeconds))
@@ -91,6 +134,18 @@ function panelApi(engine) {
       if (req.method === 'POST' && route === '/trust') {
         const body = await readJsonBody(req)
         sendJson(res, 200, await engine.setPeerTrust(body.peer, body.trust))
+        return
+      }
+
+      if (req.method === 'POST' && route === '/session/new') {
+        const body = await readJsonBody(req)
+        sendJson(res, 200, await engine.createSession(body.request || body || {}))
+        return
+      }
+
+      if (req.method === 'POST' && route === '/session/remote') {
+        const body = await readJsonBody(req)
+        sendJson(res, 200, await engine.remoteCreateSession(body.peer, body.request || body || {}))
         return
       }
 
@@ -104,8 +159,7 @@ function panelApi(engine) {
 
 export function apply(ctx) {
   // `ctx.effect` is what makes the disposer authoritative: on profile
-  // recomposition the old engine stops — and releases its listening socket —
-  // before a new one starts.
+  // recomposition the old engine stops 鈥?and releases its listening socket 鈥?  // before a new one starts.
   ctx.effect(() => {
     const engine = new SyncEngine(ctx)
     engine.start().catch((error) => {
@@ -128,7 +182,7 @@ export function apply(ctx) {
     let unroute = null
     if (webServer && typeof webServer.register === 'function') {
       try {
-        unroute = webServer.register({ kind: 'prefix', path: API_PREFIX, handler: panelApi(engine) })
+        unroute = webServer.register({ kind: 'prefix', path: API_PREFIX, handler: panelApi(engine, ctx) })
       } catch (error) {
         engine.log.warn(`cannot register the panel api: ${error && error.message ? error.message : error}`)
       }
@@ -141,3 +195,4 @@ export function apply(ctx) {
     }
   })
 }
+
