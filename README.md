@@ -359,6 +359,7 @@ macOS 如果开了"应用防火墙"，首次绑定端口时允许 dsh（或 `nod
 2. 入站放行了吗？Windows 默认拦入站，见上面的两条规则。
 3. 广播被挡？把 `pairing.port` 两边改成同一个值（默认 4401），或在 `peers` 里直接写对端 URL 作为兜底——发现失败不影响手动配置的对端。
 4. 看日志：`~/.dsh/peer-sync/sync.log`，正常应依次出现 `discovery on udp:4401` → `paired (discovered)` → `peer saved`。
+5. **刚重启完的告警不算故障**：两边都实测过，重启后直连网卡的地址要过几秒才就绪，这段时间日志会出现 `peer <name> unreachable (startup)`，对端也会看不到你（`No route to host`）。等 10–20 秒再判断，别在这时改配置。
 
 ## 怎么确认在工作
 
