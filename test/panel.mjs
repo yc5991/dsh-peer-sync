@@ -24,6 +24,7 @@ const snapshot = {
       url: 'http://10.77.0.2:4399',
       reachable: true,
       build: '0.8.3',
+      diag: { build: '0.8.3', pid: 1234, uptimeMs: 720000, node: 'v24.21.0' },
       lastSyncAt: '2026-10-27T06:27:50.483Z',
       lastError: null,
       trust: 'explicit',
@@ -143,6 +144,7 @@ assert.match(collapsed, /全部/, 'and back to everything')
 // Default view is "active": the archived fixture row must not be listed.
 assert.doesNotMatch(collapsed, /\(无标题\)/, 'archived rows are hidden by default')
 assert.match(collapsed, /build 0\.8\.3/, 'the peer build is on the card, not in a round trip')
+assert.match(collapsed, /实例 12 分钟/, 'and how long that instance has been up')
 assert.match(collapsed, /中断对端回合/, 'and a way to stop a turn stuck over there')
 assert.match(collapsed, /撤销/, 'a trusted peer can be revoked')
 assert.match(collapsed, /在对端新建会话/, 'the peer card offers to create a session there')

@@ -479,6 +479,10 @@ window.__ModuleLoader__.load({
                 : null,
               // Which build she runs: the question that used to need a round trip.
               peer.build ? h('span', { style: S.tag }, `build ${peer.build}`) : null,
+              // …and whether she really restarted: uptime says it, build cannot.
+              peer.diag && Number(peer.diag.uptimeMs) >= 0
+                ? h('span', { style: S.tag }, `${L('实例', 'up')} ${Math.max(1, Math.round(Number(peer.diag.uptimeMs) / 60000))} ${L('分钟', 'min')}`)
+                : null,
               h('span', { style: S.code }, peer.url),
             ),
             h(

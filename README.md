@@ -426,6 +426,8 @@ loaded from file:///…/dsh-peer-sync/lib/sync.js build=0.8.5 pid=44476
 
 `pid` 和 `startedAt` 是判断"这是新实例还是老实例"最快的方式：`build` 变了但 `pid` 没变、`uptimeMs` 很大，就说明模块被重新解析了而进程还活着——这正是"新路由在跑、版本号却是旧的"那次的状态。
 
+对端这份指纹也会被记下来：面板对端卡片上除了 `build 0.8.3`，还会显示 `实例 12 分钟`（`uptimeMs` 换算）。所以"她到底重启了没有"是看一眼的事，不再需要问一轮——`build` 会骗人（缓存模块），`pid` + `uptime` 不会。
+
 **不建议依赖文件 watcher。** 改 `cordis.patch.yml` 或插件源文件有时也会触发重载，但它在 Windows 上连续触发六七次后就再不响应（改什么都没反应、日志不动），而且不是每次重启都恢复。
 
 日志：`~/.dsh/peer-sync/sync.log`（UTF-8，PowerShell 读取请加 `-Encoding utf8`）。
