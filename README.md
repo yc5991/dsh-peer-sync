@@ -336,7 +336,7 @@ curl.exe -H "x-peer-token: <token>" http://10.77.0.1:4400/v1/hello
 
 `/v1/hello` 和 `/v1/status` 都带 `build`（插件 `package.json` 的版本）。两边行为不一致时**先看这个**：一边是新代码、一边是旧代码，表现出来的每个"协议 bug"其实都是版本不一致。
 
-改完插件代码不用重启 dsh——改 profile 的 `cordis.patch.yml` 或插件里的文件都会触发 profile 重载，插件连同 `lib/*.js` 一起重新 import（约 2–5 秒），`build` 会跟着变。**但这个 watcher 有寿命**：这台机器上连续触发六七次之后就不再响应了（改 patch、改源码都没反应，日志也不动），此时只能退出 app 重开。要判断新代码上没上，只认 `curl /v1/hello` 里的 `build`。
+改完插件代码不用重启 dsh——改 profile 的 `cordis.patch.yml` 或插件里的文件都会触发 profile 重载，插件连同 `lib/*.js` 一起重新 import（约 2–5 秒），`build` 会跟着变。**但这个 watcher 不可靠**：Windows 那台连续触发六七次之后就不再响应（改 patch、改源码都没反应，日志不动），而且不是每次重启都恢复——有一次重开后一次都没成功；macOS 那台相反，三次都正常。所以它只能当"省事的时候用一下"，不能当机制。真正的判据只有 `curl /v1/hello` 里的 `build`。
 
 日志：`~/.dsh/peer-sync/sync.log`（UTF-8，PowerShell 读取请加 `-Encoding utf8`）。
 无 token 的请求一律 401。
