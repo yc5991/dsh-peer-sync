@@ -389,7 +389,17 @@ curl.exe -H "x-peer-token: <token>" http://10.77.0.1:4400/v1/hello
 
 `/v1/hello` 和 `/v1/status` 都带 `build`（插件 `package.json` 的版本）。两边行为不一致时**先看这个**：一边是新代码、一边是旧代码，表现出来的每个"协议 bug"其实都是版本不一致。
 
-改完插件代码不用重启 dsh——改 profile 的 `cordis.patch.yml` 或插件里的文件都会触发 profile 重载，插件连同 `lib/*.js` 一起重新 import（约 2–5 秒），`build` 会跟着变。**但这个 watcher 不可靠**：Windows 那台连续触发六七次之后就不再响应（改 patch、改源码都没反应，日志不动），而且不是每次重启都恢复——有一次重开后一次都没成功；macOS 那台相反，三次都正常。所以它只能当"省事的时候用一下"，不能当机制。真正的判据只有 `curl /v1/hello` 里的 `build`。
+改完插件代码**不必重启 dsh**，但要用对开关。
+
+**可靠做法：切换 bundle 声明。** 把 `~/.dsh/profiles/<name>/package.json` 里 `dsh.profile.bundles` 的 `dsh-peer-sync` 摘掉、等十几秒、再放回去：
+
+```json
+"dsh": { "profile": { "bundles": ["@deepseek-ai/dsh-base", "@deepseek-ai/dsh-web-app", "dshmarket", "dsh-pet", "dsh-peer-sync"] } }
+```
+
+摘掉时日志出现 `stopped` 且监听端口消失，放回后出现 `ready`，`lib/*.js` 会重新 import（`build` 随之变化），进程和端口都不换。两台机器都验过：macOS 连续五次成功，Windows 上"撤销对端 + 切换 bundle + 恢复"这一串也照做成功。代价是约 15 秒停机。
+
+**不建议依赖文件 watcher。** 改 `cordis.patch.yml` 或插件源文件有时也会触发重载，但它在 Windows 上连续触发六七次后就再不响应（改什么都没反应、日志不动），而且不是每次重启都恢复。判据永远只有 `curl /v1/hello` 里的 `build`：数字变了才算真的换了代码。
 
 日志：`~/.dsh/peer-sync/sync.log`（UTF-8，PowerShell 读取请加 `-Encoding utf8`）。
 无 token 的请求一律 401。
