@@ -109,6 +109,8 @@ agent 会执行 `plugin_manager install_bundle`（GitHub 直装），装完重�
 
 设置面板列出的是"对端通告 ∪ 本机已镜像"，每条标 `远程 · <对端名>`、是否已镜像、是否归档。镜像关着也能看到清单——这正是以前面板显示"还没有镜像到对端会话"、而对面其实通告了 10 条的原因。
 
+通告本身会落盘到 `~/.dsh/peer-sync/peers/<peer>/advert.json`（每次握手覆盖）。这不是缓存优化，是必要的：面板的读路径原本只认 `status.json`，而那个文件只在 15 秒的 tick 里写，于是**重载后到下一次握手之前面板是空的**。启动时 `hydrateAdverts()` 把这份文件读回内存，坏文件/空文件/缺目录都只是"还没有通告"，不会阻断启动。
+
 ## 远程投递（在对面跑，消耗对面的额度）
 
 会话不复制，但消息可以投过去。投递就是真的在那台机器的进程里开一个回合：它用那台的模型、那台的目录、那台的权限去执行工具，消耗那台的额度。发起方只收到回话，不参与执行。
@@ -433,8 +435,10 @@ lib/json.js         尽力而为的 JSON 读取
 lib/log.js          同步日志（UTF-8，双写到 sync.log）
 lib/services.js     软服务查找（ctx.get，不需要 inject）
 docs/               架构图 + 流程图 + 同源 Mermaid 源码（architecture.md）
-test/approval.mjs   审批阻塞 / 回合开闭判定（12 例，取自真实事件序列）
-test/gates.mjs      谁能取会话、谁能被投递、谁能被信任、面板行合并（30 例）
+test/approval.mjs   等待循环的每个判断（答案 / 审批 / 回合开闭，取自真实事件序列）
+test/gates.mjs      谁能取会话、谁能被投递、谁能被信任、面板行合并
+test/advert.mjs     通告缓存的水合（好 / 空 / 坏 / 形状不对 / 不存在）
+test/panel.mjs      面板渲染树（替身 React，断言用户读到的文字）
 test/peer.mjs       独立双节点验证脚本（假 credentials + 假 pluginManager）
 ```
 
