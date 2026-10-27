@@ -365,7 +365,8 @@ window.__ModuleLoader__.load({
     function Panel() {
       const injected = typeof window === 'undefined' ? null : window.__DSH_PEER_SYNC__
       const [data, setData] = useState(injected)
-      const [refreshing, setRefreshing] = useState(false)
+      const [refreshing, setRefreshing] = useState(!injected)
+      const [failure, setFailure] = useState(null)
 
       // The page carries one snapshot; every write path re-reads it instead of
       // patching local state, so what the panel shows is what the engine has.
@@ -373,12 +374,24 @@ window.__ModuleLoader__.load({
         setRefreshing(true)
         try {
           const value = await api('/snapshot')
-          if (value && value.ok && value.snapshot) setData(value.snapshot)
-        } catch {
-          /* keep the last good snapshot */
+          if (value && value.ok && value.snapshot) {
+            setData(value.snapshot)
+            setFailure(null)
+          } else {
+            setFailure(value && (value.reason || value.message))
+          }
+        } catch (error) {
+          setFailure(String((error && error.message) || error))
         } finally {
           setRefreshing(false)
         }
+      }, [])
+
+      // The injected snapshot is an optimisation, not the source of truth: the
+      // Desktop shell may not render its HTML through the host's index tap, which
+      // is exactly the case that showed an empty panel here. Fetch instead.
+      React.useEffect(() => {
+        if (!injected) void refresh()
       }, [])
 
       if (!data) {
@@ -388,12 +401,20 @@ window.__ModuleLoader__.load({
           h(
             'p',
             { style: S.hint },
-            L(
-              'Host 侧没有注入状态：插件可能刚刚重载，刷新一次页面即可；若仍为空，检查插件是否启用。',
-              'No status injected by the host. Reload the page; if it stays empty, check that the plugin is enabled.',
-            ),
+            refreshing
+              ? L('正在从本机读取状态…', 'Reading status from the host…')
+              : failure
+                ? `${L('读取失败', 'Read failed')}: ${failure}`
+                : L(
+                    '没拿到状态。点下面重新读取；若仍为空，说明插件的面板接口没注册上（看 sync.log 里有没有 "panel api" 的警告）。',
+                    'No status. Read again below; if it stays empty the panel api is not registered (check sync.log for a "panel api" warning).',
+                  ),
           ),
-          h('button', { type: 'button', style: S.button, onClick: () => location.reload() }, L('刷新', 'Refresh')),
+          h(
+            'button',
+            { type: 'button', style: S.button, onClick: refresh, disabled: refreshing },
+            refreshing ? L('读取中…', 'Reading…') : L('重新读取', 'Read again'),
+          ),
         )
       }
 

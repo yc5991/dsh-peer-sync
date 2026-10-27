@@ -68,6 +68,9 @@ function renderPanel(data, options = {}) {
     useCallback(fn) {
       return fn
     },
+    // Effects are skipped: the panel's effect fetches the snapshot, and this test
+    // is about what renders, not about network timing.
+    useEffect() {},
   }
 
   let definition = null
@@ -154,8 +157,12 @@ assert.match(revoked, /恢复信任/, 'and offers the way back')
 assert.match(revoked, /不可读/, 'an unreadable mount is reported')
 assert.match(revoked, /ENOENT/, 'with the reason')
 
-// Nothing injected yet (the plugin just reloaded) must not throw either.
+// No injected snapshot: the Desktop shell does not always render its HTML through
+// the host's index tap, so this is the path a real user hit — it must explain
+// itself and offer to read instead of telling people to reload.
 const empty = renderPanel(null).text
-assert.match(empty, /没有注入状态/, 'the empty state explains itself')
+assert.match(empty, /正在从本机读取状态|没拿到状态/, 'the empty state says it is reading, not that it gave up')
+assert.match(empty, /读取中…|重新读取/, 'and offers the read action')
+assert.doesNotMatch(empty, /没有注入状态/, 'no longer blames the host for a fixable case')
 
 console.log('panel: 4 renders ok')
