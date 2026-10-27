@@ -416,6 +416,16 @@ loaded from file:///…/dsh-peer-sync/lib/sync.js build=0.8.5 pid=44476
 
 `build` 永远是唯一判据；`loaded from` 告诉你它到底从哪个文件来的（我遇到过"跑的是新代码、版本号是旧的"，根因就是这行才看清的）。
 
+同一个信息现在也在握手响应里，不用登那台机器就能看：
+
+```json
+{"ok":true,"build":"0.8.7",
+ "diag":{"build":"0.8.7","loadedFrom":"file:///…/lib/sync.js","pid":44476,
+         "startedAt":"2026-10-27T15:38:15.849Z","uptimeMs":7879,"node":"v24.21.0"}}
+```
+
+`pid` 和 `startedAt` 是判断"这是新实例还是老实例"最快的方式：`build` 变了但 `pid` 没变、`uptimeMs` 很大，就说明模块被重新解析了而进程还活着——这正是"新路由在跑、版本号却是旧的"那次的状态。
+
 **不建议依赖文件 watcher。** 改 `cordis.patch.yml` 或插件源文件有时也会触发重载，但它在 Windows 上连续触发六七次后就再不响应（改什么都没反应、日志不动），而且不是每次重启都恢复。
 
 日志：`~/.dsh/peer-sync/sync.log`（UTF-8，PowerShell 读取请加 `-Encoding utf8`）。
