@@ -340,6 +340,16 @@ window.__ModuleLoader__.load({
             { type: 'button', style: S.button, onClick: () => setOpen(!open), disabled: item.archived },
             open ? L('收起', 'Close') : L('在这里发一句', 'Send a message'),
           ),
+          // Peeking is useful on its tonight: the last answer of a session that
+          // nobody has messaged for a while is the cheapest way to see what that
+          // machine is doing, and it does not spend anything there.
+          h(
+            'button',
+            { type: 'button', style: S.button, onClick: refetch },
+            result && (result.running || result.reason === 'turn-in-progress')
+              ? L('再取一次结果', 'Fetch the answer now')
+              : L('看最近结果', 'Show the latest answer'),
+          ),
           // A turn stuck on an approval never finishes on its own, and the person
           // who notices is here, not there.
           h(
@@ -383,13 +393,6 @@ window.__ModuleLoader__.load({
                 pending ? h('span', { style: S.dim }, L('对端在跑，最多等 120 秒', 'peer is running it, up to 120s')) : null,
               ),
               h(Outcome, { value: result }),
-              result && (result.reason === 'turn-in-progress' || result.running)
-                ? h(
-                    'button',
-                    { type: 'button', style: S.button, onClick: refetch },
-                    L('再取一次结果', 'Fetch the answer now'),
-                  )
-                : null,
             )
           : null,
       )
