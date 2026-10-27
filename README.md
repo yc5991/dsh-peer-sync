@@ -179,6 +179,8 @@ curl.exe -X POST http://10.77.0.2:4399/v1/remote/cancel `
 
 入站同样受 `remotePrompts: "allow"` 管；`reason` 会写进日志，方便事后分辨是谁按的停止。低于 0.7.0 的对端回 `reason: "not-found"`。
 
+归档也有对端版本：`POST /v1/remote/session/archive {"sessionId"}`，面板上用「在对端归档」。为什么是归档而不是删除——宿主侧的删除会被 Desktop shell 按内存回写状态，留下悬挂记录；归档是它自己提供的、可逆的那个动作。回合还在跑的会话会被拒（`the session is active (turn)`），先中断再归档。
+
 ## 版本与冲突
 
 `cordis.patch.yml` **按条目合并**，不是整文件覆盖：

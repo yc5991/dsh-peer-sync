@@ -206,6 +206,22 @@ window.__ModuleLoader__.load({
         }
       }
 
+      // Tidying happens from here too: the stray sessions this plugin creates on
+      // the peer (drills, remote-created sessions) are visible in this list.
+      const archiveThere = async () => {
+        setResult(null)
+        try {
+          const value = await api('/session/archive', {
+            method: 'POST',
+            body: JSON.stringify({ peer: item.peer, sessionId: item.id }),
+          })
+          setResult(value)
+          if (props.onChanged) props.onChanged()
+        } catch (error) {
+          setResult({ ok: false, reason: 'network-error', message: String((error && error.message) || error) })
+        }
+      }
+
       const send = async () => {
         if (pending || !text.trim()) return
         setPending(true)
@@ -252,6 +268,11 @@ window.__ModuleLoader__.load({
             'button',
             { type: 'button', style: S.button, disabled: item.archived || stopping, onClick: stop },
             stopping ? L('中断中…', 'Stopping…') : L('中断对端回合', 'Stop that turn'),
+          ),
+          h(
+            'button',
+            { type: 'button', style: S.button, disabled: item.archived, onClick: archiveThere },
+            L('在对端归档', 'Archive there'),
           ),
           open
             ? h(

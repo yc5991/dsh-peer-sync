@@ -151,7 +151,11 @@ function panelApi(engine, ctx) {
 
       if (req.method === 'POST' && route === '/session/archive') {
         const body = await readJsonBody(req)
-        sendJson(res, 200, await engine.archiveSession(body.sessionId))
+        // With a peer, archive over there; without one, archive here.
+        const answer = body && body.peer
+          ? await engine.remoteArchiveSession(body.peer, body.sessionId)
+          : await engine.archiveSession(body && body.sessionId)
+        sendJson(res, 200, answer)
         return
       }
 
