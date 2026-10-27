@@ -127,7 +127,7 @@ flowchart TD
 | 审批阻塞 `blocked` | 部分 | 只有事件序列单测（`test/approval.mjs`） |
 | DAV 挂载 + 断线探测 | 已实测 | macOS `mounted:true, entries:2`；`ENOENT` 分支本机验过 |
 | 设置面板渲染 | 部分 | 渲染树单测（`test/panel.mjs`）；浏览器未看（GUI 对匿名请求 401） |
-| 面板投递 / 远程新建会话 | 部分 | 投递已做；远程新建会话未做 |
+| 远程新建会话 | 部分 | 入站 `POST /v1/remote/session` → 200 + sessionId、错 token 401；跨机组合待对端 0.6.0 |
 
 ## 三条设计取舍
 
