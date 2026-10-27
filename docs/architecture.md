@@ -157,7 +157,7 @@ flowchart TD
 | 撤销 → 403 + 停联 | 已实测 | 真实对端：`403 peer-revoked`、`/dav` 同拒、`lastSyncAt` 冻结，恢复后立刻续传 |
 | 审批阻塞 `blocked` | 已实测 | 真机演练：2.4 秒返回（两次轮询判定），带 `tool` 与审批 id，不耗满预算 |
 | DAV 挂载 + 断线探测 | 已实测 | macOS `mounted:true, entries:2`；`ENOENT` 分支本机验过 |
-| 设置面板渲染 | 已实测 | 真机面板已渲染可用；之前的空态是 `tapIndex` 注入不到页面，改成面板自己取 |
+| 设置面板渲染 | 已实测 | 用户确认过一次真机渲染；此后每次改 `client.js`，宿主 bundle 的 `rev` 都会变（`a0c2456` → `7cae947`）且日志无编译错误，说明新 UI 确实进了 bundle |
 | 会话生命周期（建/投/中断/归档） | 已实测 | 面板建到对端 → 投入 `NEW-REMOTE-OK`；中断 → `turn/end`；归档本机通 |
 | 在对端归档（跨机） | 已实测 | 我的面板归档她的 `d7e8bd03` → `archived:true` |
 | 预算到期后取回答案 | 已实测 | 1 秒预算 → `turn-in-progress`；8 秒后 `/v1/remote/result` 拿到正文 |
