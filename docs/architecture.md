@@ -18,7 +18,7 @@ python docs\render-flow.py           # -> docs/flow.png
 | 文件 | 负责 | 关键导出 |
 | --- | --- | --- |
 | `index.js` | 生命周期、面板接口 `/api/peer-sync/*`（同源，loopback） | `apply` |
-| `lib/sync.js` | 同步引擎：15 秒 tick、握手比较、三方合并、远程投递、建会话、状态文件 | `SyncEngine`、`mergeSessionList`、`openApproval`、`replyFromWindow`、`turnOpen`、`sessionsPublished`、`remoteSessionsAllowed` |
+| `lib/sync.js` | 同步引擎：15 秒 tick、握手比较、三方合并、远程投递、建会话、状态文件 | `SyncEngine`、`mergeSessionList`、`openApproval`、`replyFromWindow`、`promptWindow`、`turnOpen`、`sessionsPublished`、`remoteSessionsAllowed` |
 | `lib/http.js` | 对端通道：`/v1/*`（头令牌）+ `/dav`（Basic），两者共用同一套凭据判定 | `startServer` |
 | `lib/config.js` | 本机配置：默认值、规范化、信任判定 | `loadConfig`、`saveConfig`、`trustOf`、`identifyPeer` |
 | `lib/units.js` | 同步单元：patch / presets / credentials / 项目文件的收集与哈希 | `collectUnits`、`unitFromId`、`manifestOf` |
