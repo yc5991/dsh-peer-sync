@@ -148,7 +148,7 @@ flowchart TD
 | 审批阻塞 `blocked` | 已实测 | 真机演练：2.4 秒返回（两次轮询判定），带 `tool` 与审批 id，不耗满预算 |
 | DAV 挂载 + 断线探测 | 已实测 | macOS `mounted:true, entries:2`；`ENOENT` 分支本机验过 |
 | 设置面板渲染 | 已实测 | 真机面板已渲染可用；之前的空态是 `tapIndex` 注入不到页面，改成面板自己取 |
-| 远程新建会话 | 部分 | 入站 `POST /v1/remote/session` → 200 + sessionId、错 token 401；跨机组合待对端 0.6.0 |
+| 远程新建会话 | 已实测 | 面板在对端建出 `session-d7e8bd03…`，再投一句 → `NEW-REMOTE-OK`，4.9 秒 |
 
 ## 三条设计取舍
 

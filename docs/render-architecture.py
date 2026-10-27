@@ -148,7 +148,7 @@ ROWS = [
     ("审批阻塞 blocked", "真机演练：2.4s 返回，带工具名与审批 id", DONE),
     ("DAV 挂载 + 断线探测", "macOS mounted:true, entries:2", DONE),
     ("设置面板渲染", "真机面板已渲染（用户确认）", DONE),
-    ("远程新建会话", "入站 200+id 实测；跨机组合待对端 0.6.0", PARTIAL),
+    ("远程新建会话", "面板建到对端 → 投入 → NEW-REMOTE-OK 4.9s", DONE),
 ]
 
 col_x = [72, 72 + (W - 144) // 2]
