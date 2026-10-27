@@ -364,12 +364,26 @@ curl.exe -H "x-peer-token: <token>" http://10.77.0.1:4400/v1/hello
 ## 目录
 
 ```
-index.js            Host 插件入口（ctx.effect 管理生命周期）
-lib/paths.js        DSH_HOME / profile / patch / 凭据 / preset 路径
-lib/config.js       本地配置的读写与归一化
+index.js            Host 插件入口（ctx.effect 管理生命周期、注入面板快照）
+client.js           Web 设置面板（对端 / 插件集 / 会话 / 挂载）
+lib/paths.js        DSH_HOME / profile / patch / 凭据 / preset / 状态路径
+lib/config.js       本地配置的读写与归一化 + 信任判定（trustOf / identifyPeer）
 lib/units.js        同步单元的枚举、哈希、清单 + 可移植 spec 判断
+lib/patch.js        cordis.patch.yml 的槽位化 + 按条目三方合并
 lib/apply.js        单元落地（patch 写文件 / cred 走服务 / preset 写文件）+ 插件集补齐
-lib/http.js         对端 HTTP 传输（token 鉴权）
-lib/sync.js         同步引擎：观察、拉取、推送、冲突判定、插件集通告
+lib/http.js         对端 HTTP 传输 + /dav，凭据判定与 401/403 都在这里
+lib/sync.js         同步引擎：观察、拉取、推送、冲突判定、会话通告、远程投递
+lib/sessions.js     会话元数据、日志读取、标题（sessionQuery + 投影文件）
+lib/webdav.js       WebDAV 服务端（够 macOS WebDAVFS 挂载用）
+lib/discovery.js    UDP 广播发现
+lib/atomic.js       原子写
+lib/json.js         尽力而为的 JSON 读取
+lib/log.js          同步日志（UTF-8，双写到 sync.log）
+lib/services.js     软服务查找（ctx.get，不需要 inject）
+docs/               架构图 + 流程图 + 同源 Mermaid 源码（architecture.md）
+test/approval.mjs   审批阻塞 / 回合开闭判定（12 例，取自真实事件序列）
+test/gates.mjs      谁能取会话、谁能被投递、谁能被信任、面板行合并（30 例）
 test/peer.mjs       独立双节点验证脚本（假 credentials + 假 pluginManager）
 ```
+
+图在 [`docs/architecture.md`](docs/architecture.md)：`docs/architecture.png` 是两端组件图，`docs/flow.png` 是同步 tick 与远程投递两条主流程，两张都由 `docs/render-*.py` 生成。
