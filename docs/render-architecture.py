@@ -51,9 +51,9 @@ def arrow(x1, y1, x2, y2, color="#7A8494", width=2, head=9):
         d.polygon([(x2, y2), (x2 - head, y2 - head // 2), (x2 - head, y2 + head // 2)], fill=color)
 
 
-text(56, 40, "dsh-peer-sync 0.4.0", 32, INK, bold=True)
+text(56, 40, "dsh-peer-sync 0.5.0", 32, INK, bold=True)
 text(56, 84, "两台 DSH 通过直连网线互通：配置同步、会话可见、远程投递、项目挂载", 17, MUTED)
-text(W - 56, 46, "构建 47ac8c3 · 2026-10-27", 15, MUTED, anchor="ra")
+text(W - 56, 46, "0.5.0 · 2026-10-27", 15, MUTED, anchor="ra")
 
 # ---------------------------------------------------------------- two engines
 COL_W = 640
@@ -142,13 +142,13 @@ ROWS = [
     ("会话通告与标题", "10/10 与 7/10，跨机可读", DONE),
     ("跨机取会话日志", "/v1/session → 200 + zstd", DONE),
     ("远程投递 → 回话", "CROSS-MACHINE-OK，4.9s", DONE),
-    ("队列/忙碌识别", "busyBefore=true 仍拿到回话", DONE),
+    ("面板投递（同源接口）", "PANEL-OK，19.3s", DONE),
     ("v2 双向发密钥", "13:25 重配对成功，两侧对称", DONE),
-    ("撤销 → 403", "假密钥验过；真实对端未演练", PARTIAL),
+    ("撤销 → 403 + 停联", "真实对端：403、DAV 拒、lastSync 冻结", DONE),
     ("审批阻塞 blocked", "仅事件序列单测", PARTIAL),
     ("DAV 挂载 + 断线探测", "macOS mounted:true, entries:2", DONE),
-    ("设置面板渲染", "数据层验过；页面未看（GUI 401）", PARTIAL),
-    ("面板内发消息 / 远程新建会话", "同源代理未做", TODO),
+    ("设置面板渲染", "渲染树单测；浏览器未看（GUI 401）", PARTIAL),
+    ("面板投递 / 远程新建会话", "投递已做；新建会话未做", TODO),
 ]
 
 col_x = [72, 72 + (W - 144) // 2]

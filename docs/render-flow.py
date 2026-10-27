@@ -38,7 +38,7 @@ def dot(x, y, color, r=6):
 
 text(56, 36, "跑起来是什么样：两条主流程", 30, INK, bold=True)
 text(56, 78, "左边是一次同步 tick，右边是一次远程投递；菱形是真正的判断分支，分支都在代码里", 16, MUTED)
-text(W - 56, 44, "dsh-peer-sync 0.4.0 · 47ac8c3", 14, MUTED, anchor="ra")
+text(W - 56, 44, "dsh-peer-sync 0.5.0 · 2026-10-27", 14, MUTED, anchor="ra")
 
 COL_W = 760
 LEFT_X, RIGHT_X = 56, W - 56 - COL_W
