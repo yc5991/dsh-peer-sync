@@ -175,6 +175,7 @@ window.__ModuleLoader__.load({
       'missing-session': ['没有指定会话', 'no session given'],
       'empty-text': ['没有内容可发', 'nothing to send'],
       'archive-failed': ['对端拒绝归档（回合进行中的会话不能归档）', 'the peer refused to archive it (a running turn blocks it)'],
+      'unarchive-failed': ['对端拒绝取消归档', 'the peer refused to unarchive it'],
       'not-live': ['那台没有正在跑的回合（会话未附着），不需要中断', 'that session has no running turn in memory'],
       'cancel-failed': ['对端拒绝中断', 'the peer refused to cancel'],
       'read-failed': ['读不到那个会话（不存在或没附着）', 'could not read that session'],
@@ -279,7 +280,7 @@ window.__ModuleLoader__.load({
       const archiveThere = async () => {
         setResult(null)
         try {
-          const value = await api('/session/archive', {
+          const value = await api(item.archived ? '/session/unarchive' : '/session/archive', {
             method: 'POST',
             body: JSON.stringify({ peer: item.peer, sessionId: item.id }),
           })
@@ -360,8 +361,8 @@ window.__ModuleLoader__.load({
           ),
           h(
             'button',
-            { type: 'button', style: S.button, disabled: item.archived, onClick: archiveThere },
-            L('在对端归档', 'Archive there'),
+            { type: 'button', style: S.button, onClick: archiveThere },
+            item.archived ? L('取消归档', 'Unarchive there') : L('在对端归档', 'Archive there'),
           ),
           open
             ? h(
@@ -457,6 +458,8 @@ window.__ModuleLoader__.load({
               peer.sessions && peer.sessions.count !== undefined
                 ? h('span', { style: S.tag }, `${L('通告会话', 'sessions')} ${peer.sessions.count}`)
                 : null,
+              // Which build she runs: the question that used to need a round trip.
+              peer.build ? h('span', { style: S.tag }, `build ${peer.build}`) : null,
               h('span', { style: S.code }, peer.url),
             ),
             h(

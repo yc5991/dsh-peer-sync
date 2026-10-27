@@ -159,6 +159,15 @@ function panelApi(engine, ctx) {
         return
       }
 
+      if (req.method === 'POST' && route === '/session/unarchive') {
+        const body = await readJsonBody(req)
+        const answer = body && body.peer
+          ? await engine.remoteUnarchiveSession(body.peer, body.sessionId)
+          : await engine.unarchiveSession(body && body.sessionId)
+        sendJson(res, 200, answer)
+        return
+      }
+
       if (req.method === 'POST' && route === '/cancel') {
         const body = await readJsonBody(req)
         // With a peer, cancel over there; without one, cancel here.

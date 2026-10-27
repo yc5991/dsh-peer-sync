@@ -46,6 +46,7 @@ python docs\render-flow.py           # -> docs/flow.png
 | `POST /api/peer-sync/session/new` | GUI 服务器 | loopback | 本机新建会话 |
 | `POST /api/peer-sync/session/remote` | GUI 服务器 | loopback | 面板 → 对端新建会话 |
 | `POST /api/peer-sync/session/archive` | GUI 服务器 | loopback | 归档（带 `peer` 走对端，不带走本机） |
+| `POST /api/peer-sync/session/unarchive` | GUI 服务器 | loopback | 取消归档（同上） |
 | `POST /api/peer-sync/trust` | GUI 服务器 | loopback | 撤销 / 恢复对端 |
 | `GET /api/peer-sync/introspect` | GUI 服务器 | loopback | 只读：查宿主服务的方法与元数（白名单） |
 | `POST /v1/pair` | 对端监听器 | 配对策略 | 交换每对一枚密钥 |
@@ -55,6 +56,7 @@ python docs\render-flow.py           # -> docs/flow.png
 | `POST /v1/remote/cancel` | 对端监听器 | 同上 + `remotePrompts: allow` | 中断正在跑的回合 |
 | `POST /v1/remote/session` | 对端监听器 | 同上 + `remotePrompts: allow` | 让对端建会话 |
 | `POST /v1/remote/session/archive` | 对端监听器 | 同上 + `remotePrompts: allow` | 让对端归档会话 |
+| `POST /v1/remote/session/unarchive` | 对端监听器 | 同上 + `remotePrompts: allow` | 让对端取消归档 |
 | `GET /v1/session` | 对端监听器 | 同上 + 会话已通告 | 取会话日志（只读） |
 | `/dav` | 对端监听器 | HTTP Basic（密码=凭据） | 挂载共享目录 |
 

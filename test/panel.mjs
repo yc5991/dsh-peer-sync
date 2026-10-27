@@ -23,6 +23,7 @@ const snapshot = {
       name: 'mac-lan',
       url: 'http://10.77.0.2:4399',
       reachable: true,
+      build: '0.8.3',
       lastSyncAt: '2026-10-27T06:27:50.483Z',
       lastError: null,
       trust: 'explicit',
@@ -134,6 +135,8 @@ assert.match(collapsed, /已镜像/, 'a mirrored copy is labelled')
 assert.match(collapsed, /已归档/, 'an archived session is labelled')
 assert.match(collapsed, /在这里发一句/, 'the collapsed row offers the composer')
 assert.match(collapsed, /看最近结果/, 'and a way to peek at the last answer without sending')
+assert.match(collapsed, /取消归档/, 'an archived session offers to come back')
+assert.match(collapsed, /build 0\.8\.3/, 'the peer build is on the card, not in a round trip')
 assert.match(collapsed, /中断对端回合/, 'and a way to stop a turn stuck over there')
 assert.match(collapsed, /撤销/, 'a trusted peer can be revoked')
 assert.match(collapsed, /在对端新建会话/, 'the peer card offers to create a session there')
