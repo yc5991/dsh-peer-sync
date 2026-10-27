@@ -83,20 +83,31 @@ agent 会执行 `plugin_manager install_bundle`（GitHub 直装），装完重�
 
 冲突仍然按"修改时间新的胜出"，落败版本写成 `<文件名>.conflict-<机器>-<时间>`；**这些副本不会再被同步出去**（否则会自己复制自己）。
 
-## 会话可见（只读镜像）
+## 会话：通告 / 提供服务 / 镜像（三件事，不是一个开关）
 
-会话日志是 harness 自己的容器格式（`session.v4.jsonl.zstd`，Node 的 zstd 解码器会拒绝它），所以这里**只搬运、不解析、不导入**：
+会话日志是 harness 自己的容器格式（`session.v4.jsonl.zstd`，Node 的 zstd 解码器会拒绝它），所以这里**只搬运、不解析、不导入**。三件事分开：
 
-- 握手时附带本机最近 `sessionsLimit` 个会话的元数据：id、标题（取自 projection cache，尽力而为）、目录、更新时间、大小
-- 对端按需拉原始日志，镜像到 `~/.dsh/peer-sync/peers/<peer>/sessions/<id>/`
-- 同时生成两份索引：`index.md`（给人看，带时间/标题/目录/大小/文件链接）和 `index.json`（给程序看）
-- 已镜像且大小+时间没变就不再重复拉；单次最多拉 8 个会话，单会话上限 16 MB
+| 开关 | 作用 | 这台机器的角色 |
+| --- | --- | --- |
+| `share.sessions: true` | 握手时通告本机会话清单（id、标题、目录、大小、是否归档），并允许对端按 id 拉原始日志 | 提供方 |
+| `sync.sessions: true` | 主动把对端通告的会话日志镜像到 `~/.dsh/peer-sync/peers/<peer>/sessions/` | 消费方 |
+| 两个都关 | `/v1/remote/prompt` 仍可用，前提是你自己知道会话 id | — |
 
 ```json
-{ "sync": { "sessions": true }, "sessionsLimit": 10 }
+{ "share": { "sessions": true }, "sync": { "sessions": false }, "sessionsLimit": 10 }
 ```
 
-在另一台机器上"看"会话内容，仍然是打开那台机器上的 dsh；这个镜像解决的是"我知道对面有哪些会话、什么时候跑的、原始记录在这里"。
+`/v1/session?id=` 与通告**共用同一条判断**：只要这台机器在通告会话，就同时允许按 id 拉取。以前这里只认 `sync.sessions`，结果是"通告了 10 条、一条也拉不到"——对端镜像静默失败，日志里只有一条被 catch 住的警告。
+
+标题优先取 `ctx.sessionQuery.readTitleSnapshots(ids)`（只读服务，返回 GUI 里显示的那个折叠标题）；服务不可用时回退读 `~/.dsh/storages/session_projcache/sessions/<id>.json` 的 `record.rows.title.val`。这两处以前都不对——服务没用上、旧路径的目录结构和单文件结构都不匹配——所以通告里的标题曾经全是空串，对端列表等于没有可读信息。
+
+镜像的行为：
+
+- 已镜像且大小+时间没变就不再重复拉；单次最多拉 8 个会话，单会话上限 16 MB
+- 生成两份索引：`index.md`（给人看，带时间/标题/目录/大小/文件链接）和 `index.json`（给程序看）
+- 镜像只是**只读副本**，不是把会话搬到另一台去执行；在哪台执行由远程投递决定
+
+设置面板列出的是"对端通告 ∪ 本机已镜像"，每条标 `远程 · <对端名>`、是否已镜像、是否归档。镜像关着也能看到清单——这正是以前面板显示"还没有镜像到对端会话"、而对面其实通告了 10 条的原因。
 
 ## 远程投递（在对面跑，消耗对面的额度）
 
@@ -179,7 +190,7 @@ curl.exe -X POST http://10.77.0.2:4399/v1/remote/prompt `
   "self": "win",
   "token": "本机自己的密钥（首次运行自动生成，配对时与对端交换）",
   "listen": { "host": "10.77.0.1", "port": 4400 },
-  "peers": [{ "id": "对端节点 id", "name": "mac", "url": "http://10.77.0.2:4400", "token": "对端的 token" }],
+  "peers": [{ "id": "对端节点 id", "name": "mac", "url": "http://10.77.0.2:4400", "token": "它发给我的密钥", "inbound": "我发给它的密钥", "trust": "explicit", "pairedVia": "first" }],
   "autoPush": true,
   "autoPull": true,
   "pullIntervalMs": 15000,
@@ -187,12 +198,35 @@ curl.exe -X POST http://10.77.0.2:4399/v1/remote/prompt `
   "pairing": { "enabled": true, "mode": "auto", "port": 4401, "code": "", "announceMs": 10000, "trustFirstOnly": true },
   "sync": { "patch": true, "credentials": true, "presets": true, "bundles": true, "projects": true, "sessions": true },
   "share": { "sessions": true },
+  "dav": { "enabled": false, "root": "", "watchMount": "/Volumes/dav" },
   "remotePrompts": "allow",
   "bundlesMode": "detect"
 }
 ```
 
 `share.sessions` 和 `sync.sessions` 都认：前者控制"握手时通告本机会话清单"，后者是"把对端会话日志镜像到本地"。只想要远程投递、不想镜像日志时，开 `share.sessions` + `sync.sessions: false` 就够。
+
+`peers[].trust` 只有两个值：`explicit`（缺省，包括所有旧配置——是用户自己配过或配对过的）和 `revoked`。配对来源记在 `pairedVia`（`first` / `code`），纯为排查用。
+
+### 每对一个密钥，才能真的撤销
+
+旧协议只有一枚共享 token：谁知道它，谁就能进来，而且**所有人看起来都一样**。在这个前提下"撤销"是做不到的——你分不清来的是谁。
+
+所以配对时**各发一枚专用密钥**：我说"你可以用 `inbound` 这串来访问我"，你说"你可以用 `token` 这串来访问我"。于是：
+
+| 凭据 | 能否识别是谁 | 撤销是否生效 |
+| --- | --- | --- |
+| `peers[].inbound`（配对时发的专用密钥） | 能 | 生效：`403 peer-revoked`，连 WebDAV 挂载一起拒 |
+| `token`（本机自己的共享 token） | 不能（兼容旧版与手写配置） | 不生效——这正是需要轮换 token 的原因 |
+
+配对响应只在对方**没有**出示自己的 `grant`（也就是旧版）时才回送共享 token，新版对之间不再交换它。
+
+迁移（两台都升到 0.4.0 之后，做一次）：
+
+1. 两边都把 `peers` 清空（`"peers": []`），重载插件，让自动发现重新配对一次
+2. 若想连旧共享 token 一起作废，再改本机 `token`（会断开旧挂载，需重新挂载并重新配对）
+
+撤销一台机器：把它的 `trust` 改成 `"revoked"`，重载。之后的入站请求返回 403，出站也不再联系它。
 
 `peers` 由配对自动填写；手写也支持（那样就不依赖发现）。注意每台机器的 `token` 是**自己**的，`peers[].token` 存的是**对端**的——配对时自动交换，手写时把对方的 token 填进去即可。
 
@@ -203,16 +237,24 @@ curl.exe -X POST http://10.77.0.2:4399/v1/remote/prompt `
 插件可以在自己已有的 HTTP 通道上再暴露一个 WebDAV 端点，把本机的工作区目录共享出去。**没有 SMB、没有系统账号、没有额外端口**——认证就是配对时那枚 token（HTTP Basic，用户名随意，密码填 token）。
 
 ```json
-{ "dav": { "enabled": true, "root": "" } }
+{ "dav": { "enabled": true, "root": "", "watchMount": "/Volumes/dav" } }
 ```
 
-`root` 留空 = `projectsRoot`（默认 `~/DSH/Projects`）。改完重载插件，日志里会出现：
+`root` 留空 = `projectsRoot`（默认 `~/DSH/Projects`）。`watchMount` 填**这台机器挂载对端共享的那个路径**（只在挂载方有意义），插件每 30 秒列一次目录，断了就在日志里警告一次、并在设置面板里标红：
+
+```
+WARN  [peer-sync] mount /Volumes/dav is not readable (ENOENT) — remount it from the app; the plugin will not remount
+```
+
+不自动重挂是有意的：重挂要过系统凭据框，从插件里驱动它正是把 NetAuthAgent 队列搞死的方式（我们踩过）。恢复用 Finder 重连，或之前那条 `osascript … as user name … with password …`。
+
+改完重载插件，日志里会出现：
 
 ```
 dav: serving C:\Users\user\DSH\Projects at /dav
 ```
 
-**macOS 挂载**（两种都行，第一次要输一次密码 = Windows 那台的 token，存在 Keychain 里以后不用再输）：
+**macOS 挂载**（两种都行，密码填**这台机器持有的那串密钥**——重新配对后就是 `peers` 里对端的 `inbound`，旧配置则是共享 token；存在 Keychain 里以后不用再输）：
 
 - Finder → 前往 → 连接服务器 → `http://peer@10.77.0.1:4400/dav`
 - 或命令行：`mount_webdav -v http://peer@10.77.0.1:4400/dav ~/DSH/Remote/win`
@@ -292,7 +334,7 @@ curl.exe -H "x-peer-token: <token>" http://10.77.0.1:4400/v1/hello
 
 `/v1/hello` 和 `/v1/status` 都带 `build`（插件 `package.json` 的版本）。两边行为不一致时**先看这个**：一边是新代码、一边是旧代码，表现出来的每个"协议 bug"其实都是版本不一致。
 
-改完插件代码不用重启 dsh——往 `~/.dsh/profiles/<name>/cordis.patch.yml` 末尾追加一行注释，文件变动会触发 profile 重载，插件连同 `lib/*.js` 一起重新 import（约 2–5 秒）。改完再 `curl /v1/hello` 看 `build` 变了没有，就知道新代码上没上。
+改完插件代码不用重启 dsh——改 profile 的 `cordis.patch.yml` 或插件里的文件都会触发 profile 重载，插件连同 `lib/*.js` 一起重新 import（约 2–5 秒），`build` 会跟着变。**但这个 watcher 有寿命**：这台机器上连续触发六七次之后就不再响应了（改 patch、改源码都没反应，日志也不动），此时只能退出 app 重开。要判断新代码上没上，只认 `curl /v1/hello` 里的 `build`。
 
 日志：`~/.dsh/peer-sync/sync.log`（UTF-8，PowerShell 读取请加 `-Encoding utf8`）。
 无 token 的请求一律 401。
@@ -302,6 +344,10 @@ curl.exe -H "x-peer-token: <token>" http://10.77.0.1:4400/v1/hello
 - 插件集只做"补齐"，不做"移除"；`link:`/本地路径的包只能在目标机手动装（`dsh-peer-sync` 自己就属于这类）。
 - 删除不同步：一边删掉一个 preset 或项目文件，另一边不会跟着删（没有墓碑记录）。
 - 远程投递只能投给**已经存在**的会话，不能远程新建会话；对面卡住也没有远程取消/重跑的接口，只能那台机器上的人处理。
+- 设置面板里的对端会话列表是**只读**的：它告诉你"这条跑在哪台"，不提供点开执行。要让它能发消息，就得在 LAN 监听器上开 CORS 并把 token 塞进页面，那等于把一条本来只认 token 的通道降级，暂时不做。
+- 撤销一台 peer 时，它手里的 WebDAV 挂载也一起被拒（`403`）——前提是那台用的是配对时发给它的专用密钥。用旧共享 token 挂上的要先重新配对（见「每对一个密钥」）。
+- `workspacesRemove` 不可靠：`registry.delete()` 会返回成功，但 Desktop shell 随后按内存回写状态、条目又回来了。所以代码会再列一次确认，确认不到就明说"删除未被确认，请手动移除"，不会谎报。
+- 会话标题依赖 `sessionQuery` 或 projection cache；两者都读不到时显示 `(无标题)`，不会编一个。
 - 只同步 profile patch，不同步 `$DSH_HOME/cordis.patch.yml`（home 层 patch）。
 - 项目同步是"逐文件镜像"而不是真合并：两边同时改同一个代码文件时不会做三方合并，只会留副本。代码项目将来更合适的做法是 git（见下）。
 - 超过 1 MB 的项目文件会被跳过（只记状态，不报错）。
@@ -310,7 +356,8 @@ curl.exe -H "x-peer-token: <token>" http://10.77.0.1:4400/v1/hello
 ## 后续
 
 - 代码类项目的合并交给 git：`git bundle` 经现有通道交换，或用 `syncMode: 'git'` 让插件只做 commit/fetch/merge，而不是字节级镜像。
-- 会话可见性：`sessions/` 是每机 JSONL 且含本机绝对路径，要共享需要一层只读镜像。
+- 面板里的远程会话若要能直接发消息，需要一个同源代理（GUI 服务器转发到 LAN 监听器），而不是给 LAN 监听器加 CORS。
+- 远程新建会话：目前只能在已存在的会话里投递。
 
 ## 目录
 

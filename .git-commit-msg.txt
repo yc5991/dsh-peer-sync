@@ -1,0 +1,40 @@
+Real peer revocation, working titles, and a panel that says which machine runs what
+
+The trust field as first written was security theatre: inbound requests present
+*this* machine's token, so matching it against peers[].token could never fire.
+The hole is the protocol, not the check — with one shared token every caller
+looks identical, and "revoked" cannot mean anything.
+
+Pairing now issues a per-peer key each way (peers[].inbound is the key this
+machine hands out, peers[].token the one it received), and a caller offering its
+own key no longer receives the shared token in return. Inbound requests are
+identified by key, so a revoked peer gets 403 peer-revoked on every route
+including its WebDAV mount, while outbound stops contacting it. The shared token
+stays accepted for pre-0.4 pairings and hand-written configs, which is exactly
+why rotating it is part of the revocation story.
+
+Titles were empty on both machines for two independent reasons: the projection
+path is a directory on current installs, and the ids differ (`session-<uuid>`
+versus `<uuid>.json`). Titles now come from sessionQuery.readTitleSnapshots with
+the per-session projection file as fallback.
+
+/v1/session gated on sync.sessions while the advert gated on share.sessions, so a
+machine could publish ten sessions and serve none of them. Both now ask the same
+helper.
+
+The panel merged the mirror index only, so it claimed "nothing mirrored" while
+the peer advertised ten sessions; it now lists advert union mirror with
+`remote - <peer>`, mirrored and archived markers.
+
+workspacesRemove no longer reports a removal it cannot confirm; dav.watchMount
+probes the mount on a timer and warns once, and never remounts.
+
+Verified live on this machine: shared token 200 / issued key 200 / revoked key
+403 / garbage 401; DAV OPTIONS 200, 200, 403, 401; the revoked peer was never
+contacted (absent from the log while the trusted probe appeared); titles 10/10;
+/v1/session serves files while sync.sessions is false; mount probe in both
+branches (ENOENT and readable). Panel rows are unit-tested, the rendered panel
+was not inspected: the GUI answers 401 to anonymous requests, so its injected
+snapshot could not be read here. Not verified: a v2-to-v2 pairing exchange, and
+the Mac side of any of this. The profile reload watcher also stopped responding
+after six reloads, so the running process still serves the previous build.
