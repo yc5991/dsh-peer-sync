@@ -3,6 +3,7 @@ window.__ModuleLoader__.load({
   factory(require) {
     const React = require('react')
     const h = React.createElement
+    const { useState } = React
 
     const zh = typeof navigator !== 'undefined' && /^zh/i.test(navigator.language || '')
     const L = (cn, en) => (zh ? cn : en)
@@ -66,6 +67,41 @@ window.__ModuleLoader__.load({
         background: 'var(--dsw-alias-bg-layer-2)',
         color: 'var(--dsw-alias-label-secondary)',
       },
+      textarea: {
+        width: '100%',
+        boxSizing: 'border-box',
+        border: '1px solid var(--dsw-alias-border-l2)',
+        borderRadius: 8,
+        background: 'var(--dsw-alias-bg-layer-2)',
+        color: 'var(--dsw-alias-label-primary)',
+        fontFamily: 'inherit',
+        fontSize: 13,
+        padding: '8px 10px',
+        resize: 'vertical',
+      },
+      reply: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 4,
+        borderLeft: '2px solid var(--dsw-alias-state-success-primary)',
+        paddingLeft: 10,
+      },
+      pre: {
+        margin: 0,
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-word',
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+        fontSize: 12,
+        color: 'var(--dsw-alias-label-primary)',
+        maxHeight: 220,
+        overflow: 'auto',
+      },
+      warn: {
+        margin: 0,
+        fontSize: 12,
+        color: 'var(--dsw-alias-state-warning-primary, var(--dsw-alias-label-secondary))',
+        lineHeight: 1.6,
+      },
     }
 
     function when(value) {
@@ -102,7 +138,136 @@ window.__ModuleLoader__.load({
       return h('section', { style: S.section }, h('h3', { style: S.title }, props.title), props.children)
     }
 
+    /**
+     * The panel's write path lives on the GUI server (loopback only), not on the
+     * peer listener: the page is already talking to that origin, and the peer
+     * token must never end up in a page.
+     */
+    async function api(path, init) {
+      const response = await fetch(`/api/peer-sync${path}`, {
+        ...(init || {}),
+        headers: { 'content-type': 'application/json', ...((init && init.headers) || {}) },
+      })
+      const value = await response.json().catch(() => null)
+      if (!value || typeof value !== 'object') return { ok: false, reason: `http-${response.status}` }
+      if (!response.ok && value.ok !== false) return { ...value, ok: false, reason: value.reason || `http-${response.status}` }
+      return value
+    }
+
+    /** One line of truth about a delivered prompt, whatever came back. */
+    function Outcome(props) {
+      const value = props.value
+      if (!value) return null
+      if (value.replied) {
+        return h(
+          'div',
+          { style: S.reply },
+          h('span', { style: S.dim }, `${L('回话', 'reply')} · ${((Number(value.waitedMs) || 0) / 1000).toFixed(1)}s`),
+          h('pre', { style: S.pre }, String(value.reply || '')),
+        )
+      }
+      const reason = value.reason || (value.ok ? 'unknown' : 'failed')
+      const note = value.hint || value.message || ''
+      return h('p', { style: S.warn }, `${reason}${note ? ` · ${note}` : ''}`)
+    }
+
+    function SessionRow(props) {
+      const item = props.item
+      const [open, setOpen] = useState(false)
+      const [text, setText] = useState('')
+      const [pending, setPending] = useState(false)
+      const [result, setResult] = useState(null)
+
+      const send = async () => {
+        if (pending || !text.trim()) return
+        setPending(true)
+        setResult(null)
+        try {
+          const value = await api('/prompt', {
+            method: 'POST',
+            body: JSON.stringify({ peer: item.peer, sessionId: item.id, text, wait: true, waitSeconds: 120 }),
+          })
+          setResult(value)
+          if (value && value.replied) setText('')
+          if (props.onChanged) props.onChanged()
+        } catch (error) {
+          setResult({ ok: false, reason: 'network-error', message: String((error && error.message) || error) })
+        } finally {
+          setPending(false)
+        }
+      }
+
+      return h(
+        'li',
+        { style: S.card },
+        h(
+          'div',
+          { style: S.row },
+          h(Where, { item }),
+          h('span', { style: S.name }, item.title || L('(无标题)', '(untitled)')),
+          item.mirrored ? h('span', { style: S.tag }, L('已镜像', 'mirrored')) : null,
+          item.archived ? h('span', { style: S.tag }, L('已归档', 'archived')) : null,
+        ),
+        h('div', { style: S.row }, h('span', { style: S.dim }, `${when(item.updatedAt)} · ${size(item.size)}`)),
+        h('span', { style: S.code }, item.cwd || ''),
+        h(
+          'div',
+          { style: S.row },
+          h(
+            'button',
+            { type: 'button', style: S.button, onClick: () => setOpen(!open), disabled: item.archived },
+            open ? L('收起', 'Close') : L('在这里发一句', 'Send a message'),
+          ),
+          open
+            ? h(
+                'span',
+                { style: S.dim },
+                L('在这一行按发送：消息传到对端，由对端消耗额度、按对端权限执行。', 'Send: the peer runs it, with its quota and its permissions.'),
+              )
+            : null,
+        ),
+        open
+          ? h(
+              'div',
+              { style: S.section },
+              h('textarea', {
+                style: S.textarea,
+                rows: 3,
+                value: text,
+                placeholder: L('要发给这个会话的话…', 'Message for this session…'),
+                onChange: (event) => setText(event.target.value),
+                disabled: pending,
+              }),
+              h(
+                'div',
+                { style: S.row },
+                h(
+                  'button',
+                  { type: 'button', style: S.button, onClick: send, disabled: pending || !text.trim() },
+                  pending ? L('等待对端…', 'Waiting…') : L('发送', 'Send'),
+                ),
+                pending ? h('span', { style: S.dim }, L('对端在跑，最多等 120 秒', 'peer is running it, up to 120s')) : null,
+              ),
+              h(Outcome, { value: result }),
+            )
+          : null,
+      )
+    }
+
     function Peers(props) {
+      const [busy, setBusy] = useState(null)
+
+      const toggle = async (peer) => {
+        const next = peer.trust === 'revoked' ? 'explicit' : 'revoked'
+        setBusy(peer.name)
+        try {
+          await api('/trust', { method: 'POST', body: JSON.stringify({ peer: peer.name, trust: next }) })
+          if (props.onChanged) props.onChanged()
+        } finally {
+          setBusy(null)
+        }
+      }
+
       if (!props.peers.length) {
         return h('p', { style: S.hint }, L('还没有对端。两台都装好后会自动发现并配对。', 'No peers yet. They pair automatically once both sides run.'))
       }
@@ -132,9 +297,23 @@ window.__ModuleLoader__.load({
             ),
             h(
               'div',
-              { style: S.dim },
-              `${L('上次同步', 'last sync')} ${when(peer.lastSyncAt)}`,
-              peer.lastError ? ` · ${peer.lastError}` : '',
+              { style: S.row },
+              h('span', { style: S.dim }, `${L('上次同步', 'last sync')} ${when(peer.lastSyncAt)}`),
+              peer.lastError ? h('span', { style: S.dim }, peer.lastError) : null,
+              h(
+                'button',
+                {
+                  type: 'button',
+                  style: S.button,
+                  disabled: busy === peer.name,
+                  onClick: () => toggle(peer),
+                },
+                busy === peer.name
+                  ? L('保存中…', 'Saving…')
+                  : peer.trust === 'revoked'
+                    ? L('恢复信任', 'Trust again')
+                    : L('撤销', 'Revoke'),
+              ),
             ),
           ),
         ),
@@ -142,7 +321,23 @@ window.__ModuleLoader__.load({
     }
 
     function Panel() {
-      const data = typeof window === 'undefined' ? null : window.__DSH_PEER_SYNC__
+      const injected = typeof window === 'undefined' ? null : window.__DSH_PEER_SYNC__
+      const [data, setData] = useState(injected)
+      const [refreshing, setRefreshing] = useState(false)
+
+      // The page carries one snapshot; every write path re-reads it instead of
+      // patching local state, so what the panel shows is what the engine has.
+      const refresh = React.useCallback(async () => {
+        setRefreshing(true)
+        try {
+          const value = await api('/snapshot')
+          if (value && value.ok && value.snapshot) setData(value.snapshot)
+        } catch {
+          /* keep the last good snapshot */
+        } finally {
+          setRefreshing(false)
+        }
+      }, [])
 
       if (!data) {
         return h(
@@ -173,7 +368,11 @@ window.__ModuleLoader__.load({
           { style: S.row },
           h('span', { style: S.name }, L('跨机同步', 'Peer Sync')),
           h('span', { style: S.tag }, data.pairing && data.pairing.mode ? `pairing: ${data.pairing.mode}` : 'pairing: —'),
-          h('button', { type: 'button', style: S.button, onClick: () => location.reload() }, L('刷新', 'Refresh')),
+          h(
+            'button',
+            { type: 'button', style: S.button, onClick: refresh, disabled: refreshing },
+            refreshing ? L('读取中…', 'Reading…') : L('重新读取', 'Refresh'),
+          ),
         ),
         h(
           'p',
@@ -181,7 +380,7 @@ window.__ModuleLoader__.load({
           `${L('本机', 'this machine')} ${data.self || '?'} · ${L('监听', 'listen')} ${data.listen || '?'} · ${L('发现', 'discovery')} udp:${(data.pairing && data.pairing.port) || '?'} · ${units.count} ${L('个同步单元', 'units')}`,
         ),
 
-        h(Section, { title: `${L('对端', 'Peers')} (${peers.length})` }, h(Peers, { peers })),
+        h(Section, { title: `${L('对端', 'Peers')} (${peers.length})` }, h(Peers, { peers, onChanged: refresh })),
 
         h(
           Section,
@@ -234,24 +433,9 @@ window.__ModuleLoader__.load({
                 h(
                   'ul',
                   { style: S.list },
-                  sessions.items.slice(0, 8).map((item) =>
-                    h(
-                      'li',
-                      { key: item.id, style: S.card },
-                      h(
-                        'div',
-                        { style: S.row },
-                        h(Where, { item }),
-                        h('span', { style: S.name }, item.title || L('(无标题)', '(untitled)')),
-                        item.mirrored
-                          ? h('span', { style: S.tag }, L('已镜像', 'mirrored'))
-                          : null,
-                        item.archived ? h('span', { style: S.tag }, L('已归档', 'archived')) : null,
-                      ),
-                      h('div', { style: S.row }, h('span', { style: S.dim }, `${when(item.updatedAt)} · ${size(item.size)}`)),
-                      h('span', { style: S.code }, item.cwd || ''),
-                    ),
-                  ),
+                  sessions.items
+                    .slice(0, 8)
+                    .map((item) => h(SessionRow, { key: item.id, item, onChanged: refresh })),
                 ),
                 sessions.truncated
                   ? h('p', { style: S.hint }, L(`只列出前 ${sessions.items.length} 条。`, `Showing the first ${sessions.items.length}.`))
@@ -322,3 +506,4 @@ window.__ModuleLoader__.load({
     }
   },
 })
+
