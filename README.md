@@ -162,6 +162,8 @@ curl.exe -X POST http://10.77.0.2:4399/v1/remote/session `
 
 `request` 支持 `cwd` 与 `agentPreset`，留空就用那台机器的默认目录、默认 preset。入站和投递用同一个开关（`remotePrompts: "allow"`）：两者都意味着"另一台可以动我的会话"，而新建会话是更侵入的那一半。面板上的「在对端新建会话」按钮就是这个调用；新会话要等对端下一次握手（≤15 秒）才会出现在列表里。
 
+会话标题不需要等它自己想：`title` 不是 `create` 契约的一部分，所以建完会紧接着用 `sessionController.rename` 补一个，默认是 `来自 <对端名> 的会话`。这样在对面侧边栏里它不是一个空白条目。标题投影需要几秒才会传到 `readTitleSnapshots`，实测约 10 秒。
+
 对端若是低于 0.6.0 的版本，会回 `reason: "not-found"` —— 那个版本还没有这条路由。
 
 ### 中断对端的回合（`/v1/remote/cancel`）
