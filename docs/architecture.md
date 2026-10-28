@@ -51,6 +51,10 @@ python docs\render-flow.py           # -> docs/flow.png
 | `GET /api/peer-sync/introspect` | GUI 服务器 | loopback | 只读：查宿主服务的方法与元数（白名单） |
 | `POST /v1/pair` | 对端监听器 | 配对策略 | 交换每对一枚密钥 |
 | `GET /v1/hello` | 对端监听器 | 头令牌 / 专用密钥 | 单元清单 + 会话通告 + `build` |
+| `POST /v1/apply` | 对端监听器 | 同上 | 收下一个同步单元（对端推来的内容） |
+| `GET /v1/unit` | 对端监听器 | 同上 | 按 id 取一个单元（拉取方向） |
+| `GET /v1/status` | 对端监听器 | 同上 | 本机状态：units / pending / peers |
+| `GET /v1/session/page` | 对端监听器 | 同上 | 读会话事件窗口（诊断用，只给 `seq`/`type`） |
 | `POST /v1/remote/prompt` | 对端监听器 | 同上 + `remotePrompts: allow` | 投递并等待回话 |
 | `GET /v1/remote/result` | 对端监听器 | 同上 + `remotePrompts: allow` | 只读：这个会话的回合产出到哪了 |
 | `POST /v1/remote/cancel` | 对端监听器 | 同上 + `remotePrompts: allow` | 中断正在跑的回合 |
