@@ -75,6 +75,9 @@ function renderPanel(data, options = {}) {
       // The filter is the only string state; letting a render choose it is how
       // the archived-row branch gets covered without a browser.
       if (options.filter && value === 'active') return [options.filter, () => {}]
+      // The session-row marker starts as null and is filled by an effect; passing a
+      // place here renders the state the effect would have produced.
+      if (options.place !== undefined && value === null) return [options.place, () => {}]
       return [openState && value === false ? true : value, () => {}]
     },
     useCallback(fn) {
@@ -100,18 +103,21 @@ function renderPanel(data, options = {}) {
     throw new Error(`unexpected require: ${request}`)
   })
   let component = null
+  let rowComponent = null
   entry.apply({
     slots: {
       inject(_name, run) {
         run()
       },
       register(meta, registered) {
-        // The plugin registers two slots now; this test is about the settings tab.
+        // Two slots are registered; the panel and the session-row marker.
         if (meta && meta.name === 'settings.plugins.tab') component = registered
+        if (meta && meta.name === 'sidebar.session.row.leading') rowComponent = registered
       },
     },
   })
   assert.equal(typeof component, 'function', 'the panel registered a component')
+  assert.equal(typeof rowComponent, 'function', 'the row marker registered a component')
 
   const texts = []
   const walk = (node) => {
@@ -139,6 +145,61 @@ function renderPanel(data, options = {}) {
   walk(component())
   return { text: texts.join(' ') }
 }
+
+/** The glyph the session-row marker draws for a given place. */
+function renderMarker(place) {
+  const source = fs.readFileSync(new URL('../client.js', import.meta.url), 'utf8')
+  const React = {
+    createElement(type, props, ...children) {
+      return { type, props: props || {}, children: children.flat(Infinity) }
+    },
+    useState(initial) {
+      const value = typeof initial === 'function' ? initial() : initial
+      if (value === null) return [place, () => {}]
+      return [value, () => {}]
+    },
+    useCallback: (fn) => fn,
+    useEffect() {},
+  }
+  let definition = null
+  const window = { __ModuleLoader__: { load: (value) => { definition = value } } }
+  new Function('window', 'navigator', 'require', source)(window, { language: 'zh-CN' }, (request) => {
+    if (request === 'react') return React
+    throw new Error(`unexpected require: ${request}`)
+  })
+  const entry = definition.factory((request) => {
+    if (request === 'react') return React
+    throw new Error(`unexpected require: ${request}`)
+  })
+  let row = null
+  entry.apply({
+    slots: {
+      inject: (_name, run) => run(),
+      register: (meta, registered) => {
+        if (meta && meta.name === 'sidebar.session.row.leading') row = registered
+      },
+    },
+  })
+  assert.equal(typeof row, 'function', 'the row marker is registered')
+  const tree = row({ sessionId: 'session-marker' })
+  const collect = (node, out) => {
+    if (node === null || node === undefined || node === false || node === true) return out
+    if (Array.isArray(node)) {
+      node.forEach((child) => collect(child, out))
+      return out
+    }
+    if (typeof node === 'string') {
+      out.push(node)
+      return out
+    }
+    return collect(node.children, out)
+  }
+  return collect(tree, []).join('')
+}
+
+assert.equal(renderMarker('peer'), '🍎', "a session whose files are on the peer gets the apple")
+assert.equal(renderMarker('local'), '💻', 'a local session gets the laptop')
+assert.equal(renderMarker(null), '', 'an unknown session draws nothing rather than guessing')
 
 const collapsed = renderPanel(snapshot).text
 assert.match(collapsed, /远程 · mac-lan/, 'each session row says which machine runs it')
