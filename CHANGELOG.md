@@ -17,6 +17,12 @@
 - **0.11.8** 面板加图例，画出这两个形状。
 - **0.11.9** 仓库可发布性：`package.json` 补 license / repository / homepage / bugs / keywords；新增本文件；`test/docs.mjs` 断言这些元数据，并要求本文件里必须出现"未验证"。
 
+## 0.12.2 — 没有挂载也能在对端打开
+
+- `POST /api/peer-sync/project/open` 增加 `remotePath` 参数：直接给对面路径就不需要本机挂载（只挂载了对面一部分目录时有用）。
+- 实测（跨机）：`remotePath: /Users/yicheng/.dsh/whale/work` → 对面出现该 cwd 的会话，`byPeer: win`；验完归档。
+- 记录字体实测：`msyhbd.ttc` 里 `☁`、`▣`、`◐`、`▶` 都是方框，`◆ ● ★ ◇ ※ →` 与中文正常——这是放弃"用字符当标记"的直接依据。
+
 ## 0.12.1 — 在对端打开挂载的项目
 
 - 新增 `POST /api/peer-sync/project/open` 与面板「在对端打开」按钮：把本地挂载路径**反向翻译**成对面路径（`mapLocalToRemote`），让对端用**它自己的 cwd** 建会话，于是回合跑在对面（对面的额度与权限）。
