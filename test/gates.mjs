@@ -4,7 +4,7 @@
 // un-trusted, a panel that hid the peer's sessions when nothing was mirrored.
 
 import assert from 'node:assert/strict'
-import { mapRemotePath, mergeSessionList, remoteSessionsAllowed, sessionsPublished } from '../lib/sync.js'
+import { mapRemotePath, mergeSessionList, placeOfSession, remoteSessionsAllowed, sessionsPublished, underAny } from '../lib/sync.js'
 import { identifyPeer, trustOf } from '../lib/config.js'
 import { titleFromSnapshot, titleOf } from '../lib/sessions.js'
 
@@ -109,5 +109,17 @@ assert.equal(mapRemotePath('/Volumes/DATA/ds', []), null)
 // a trailing slash on the mount is normalised away by the config loader, but the
 // mapper tolerates it too
 assert.equal(mapRemotePath('/Volumes/DATA/ds', [{ remote: '/Volumes/DATA/', local: 'Z:\\' }]), 'Z:\\ds')
+
+// --- where a session's files live -------------------------------------------
+// A session's cwd arrives in two forms, and the decoded one loses a leading slash:
+// the mapped drive and the stored UNC path must both read as "on the peer".
+const placeMounts = [{ local: 'Z:\\' }]
+assert.equal(placeOfSession('Z:\\ds', placeMounts), 'peer')
+assert.equal(placeOfSession('z:/ds/sub', placeMounts), 'peer')
+assert.equal(placeOfSession('C:\\Users\\user\\Documents', placeMounts), 'local')
+assert.equal(underAny('/10.77.0.2/DATA/ds', ['\\\\10.77.0.2\\DATA\\ds']), true, 'decoded UNC matches the stored UNC')
+assert.equal(underAny('\\\\10.77.0.2\\DATA\\ds\\bili-whale', ['\\\\10.77.0.2\\DATA\\ds']), true)
+assert.equal(underAny('C:\\Users\\user\\ds', ['\\\\10.77.0.2\\DATA\\ds']), false)
+assert.equal(underAny('/10.77.0.2/DATA/ds2', ['\\\\10.77.0.2\\DATA\\ds']), false, 'a sibling prefix is not inside')
 
 console.log('gates: ok')
