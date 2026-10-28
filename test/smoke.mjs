@@ -25,6 +25,14 @@ const add = (name, ok, detail) => {
   rows.push({ name, ok, detail })
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name.padEnd(34)} ${detail || ''}`)
 }
+// A peer that deliberately publishes nothing is not broken — but the difference
+// between "nothing to sync" and "nothing published" has to be visible, because
+// the panel cannot tell them apart either.
+let warnings = 0
+const warn = (name, detail) => {
+  warnings += 1
+  console.log(`${'WARN'.padEnd(4)}  ${name.padEnd(34)} ${detail || ''}`)
+}
 
 const call = async (base, route, init, peerToken) => {
   const response = await fetch(base + route, {
@@ -48,6 +56,10 @@ const run = async () => {
   try {
     const hello = await call(listen, '/v1/hello')
     add('local hello', hello.status === 200 && hello.body.ok === true, `build ${hello.body.build || '?'} pid ${hello.body.diag ? hello.body.diag.pid : '?'}`)
+    const ownBundles = Array.isArray(hello.body.bundles) ? hello.body.bundles.length : 0
+    const ownSessions = Array.isArray(hello.body.sessions) ? hello.body.sessions.length : 0
+    add('local publishes bundles', ownBundles > 0, `${ownBundles} bundles`)
+    add('local publishes sessions', ownSessions > 0, `${ownSessions} sessions`)
   } catch (error) {
     add('local hello', false, error.message)
     return
@@ -111,14 +123,24 @@ const run = async () => {
       const diag = hello.body && hello.body.diag
       add('peer hello', ok, ok ? `build ${hello.body.build}${diag ? ` up ${Math.round(diag.uptimeMs / 60000)}m` : ''}` : `http ${hello.status}`)
       const sessions = (hello.body && hello.body.sessions) || []
-      add('peer advertises sessions', Array.isArray(sessions) && sessions.length > 0, `${sessions.length} sessions`)
+      const bundles = (hello.body && hello.body.bundles) || []
+      if (Array.isArray(sessions) && sessions.length > 0) add('peer advertises sessions', true, `${sessions.length} sessions`)
+      else warn('peer advertises sessions', 'none: its share.sessions is off, or it has no sessions')
+      if (Array.isArray(bundles) && bundles.length > 0) {
+        const off = bundles.filter((bundle) => bundle && bundle.enabled === false).length
+        add('peer advertises bundles', true, `${bundles.length} bundles, ${off} disabled`)
+      } else {
+        warn('peer advertises bundles', 'none: its sync.bundles is off, so the panel has no diff to show')
+      }
+      if (hello.body && !hello.body.diag) warn('peer load fingerprint', 'peer build predates 0.8.7: uptime/pid unknown')
     } catch (error) {
       add('peer hello', false, error.message)
     }
   }
 
   const failed = rows.filter((row) => !row.ok).length
-  console.log(`\n${rows.length - failed}/${rows.length} checks passed${withPeer ? '' : ' (peer skipped: run with --peer)'}`)
+  const suffix = withPeer ? '' : ' (peer skipped: run with --peer)'
+  console.log(`\n${rows.length - failed}/${rows.length} checks passed${suffix}${warnings > 0 ? `, ${warnings} warning(s)` : ''}`)
   process.exitCode = failed === 0 ? 0 : 1
 }
 
