@@ -47,4 +47,14 @@ const phantom = [...documented]
   .sort()
 assert.deepEqual(phantom, [], `documented routes the code does not serve: ${phantom.join(', ')}`)
 
-console.log(`docs: ${found.size} routes documented, ${documented.size} documented routes exist`)
+// The README lists every test file; it drifted the moment a test was added and
+// nobody updated the list, so the listing is checked instead of trusted.
+const readme = read('README.md')
+const testFiles = fs
+  .readdirSync(new URL('../test/', import.meta.url))
+  .filter((name) => name.endsWith('.mjs'))
+  .sort()
+const unlisted = testFiles.filter((name) => !readme.includes(`test/${name}`))
+assert.deepEqual(unlisted, [], `tests missing from the README directory listing: ${unlisted.join(', ')}`)
+
+console.log(`docs: ${found.size} routes documented, ${documented.size} documented routes exist, ${testFiles.length} tests listed`)

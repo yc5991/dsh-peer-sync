@@ -520,6 +520,8 @@ test/gates.mjs      谁能取会话、谁能被投递、谁能被信任、面板
 test/advert.mjs     通告缓存的水合（好 / 空 / 坏 / 形状不对 / 不存在）
 test/docs.mjs       路由与文档对账（两边都查，防止表格过期）
 test/panel.mjs      面板渲染树（替身 React，断言用户读到的文字）
+test/smoke.mjs      一键自检：本机走完会话生命周期，对端只读
+test/fake-peer.mjs  peer.mjs 用的假对端
 test/peer.mjs       独立双节点验证脚本（假 credentials + 假 pluginManager）
 ```
 
