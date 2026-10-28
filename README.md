@@ -395,7 +395,7 @@ node test\smoke.mjs --peer
 ```
 
 ```
-PASS  local hello                        build 0.9.0 pid 44476
+PASS  local hello                        build 0.9.7 pid 44476
 PASS  local publishes bundles            23 bundles
 PASS  local publishes sessions           10 sessions
 PASS  local status                       11 units
@@ -403,15 +403,16 @@ PASS  create session                     session-fab05b86-…
 PASS  deliver and answer                 6099ms "SMOKE-OK"
 PASS  archive session                    true
 PASS  unarchive session                  false
-PASS  peer hello                         build 0.8.3
+PASS  peer hello                         build 0.9.7 up 12m
 PASS  peer advertises sessions           10 sessions
 WARN  peer advertises bundles            none: its sync.bundles is off, so the panel has no diff to show
-WARN  peer load fingerprint              peer build predates 0.8.7: uptime/pid unknown
 
-10/10 checks passed, 2 warning(s)
+10/10 checks passed, 1 warning(s)
 ```
 
-`WARN` 不算失败（对面故意关掉某一类通告是合法配置），但它把"没有东西可同步"和"对面什么都没发"分开——这两件事在面板上长得一样，正是让我漏看了一整天的那种。
+`WARN` 不算失败（对面故意关掉某一类通告是合法配置），但它把"没有东西可同步"和"对面什么都没发"分开——这两件事在面板上长得一样，正是让我漏看了一整天的那种。本机自己的通告也一样：`sync.bundles: false` 时这里是 `WARN` 而不是 `FAIL`（这条是第一台机器之外的另一台跑出来才发现的，我原来的判定是硬失败、退出码 1，却和文档里"L2 是按机器选择加入"的说法矛盾）。
+
+`test/` 现在打进了包（`package.json` 的 `files`），所以 tarball 安装出来的目录里也能跑这个自检，不必先 clone。
 
 不带 `--peer` 就只查本机。任何一条 FAIL 都会让退出码非 0，可以挂进脚本。它检查的是"能不能真的投递并拿到回话"——不是端口通不通，那个 `local hello` 已经覆盖了。
 

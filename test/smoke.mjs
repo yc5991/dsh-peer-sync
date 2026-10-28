@@ -20,6 +20,12 @@ const listen = `http://${config.listen.host}:${config.listen.port}`
 const token = config.token
 const peer = Array.isArray(config.peers) ? config.peers[0] : null
 
+// Both adverts are opt-in per machine. The first run on the other machine exited 1
+// because it treats "this machine publishes nothing on purpose" as a failure, which
+// contradicted the documented meaning of the switch.
+const bundlesOn = !(config.sync && config.sync.bundles === false)
+const sessionsOn = Boolean((config.share && config.share.sessions) || (config.sync && config.sync.sessions))
+
 const rows = []
 const add = (name, ok, detail) => {
   rows.push({ name, ok, detail })
@@ -58,8 +64,12 @@ const run = async () => {
     add('local hello', hello.status === 200 && hello.body.ok === true, `build ${hello.body.build || '?'} pid ${hello.body.diag ? hello.body.diag.pid : '?'}`)
     const ownBundles = Array.isArray(hello.body.bundles) ? hello.body.bundles.length : 0
     const ownSessions = Array.isArray(hello.body.sessions) ? hello.body.sessions.length : 0
-    add('local publishes bundles', ownBundles > 0, `${ownBundles} bundles`)
-    add('local publishes sessions', ownSessions > 0, `${ownSessions} sessions`)
+    if (ownBundles > 0) add('local publishes bundles', true, `${ownBundles} bundles`)
+    else if (!bundlesOn) warn('local publishes bundles', 'sync.bundles is off here on purpose (opt-in), so nothing is published')
+    else add('local publishes bundles', false, 'nothing published while sync.bundles is on')
+    if (ownSessions > 0) add('local publishes sessions', true, `${ownSessions} sessions`)
+    else if (!sessionsOn) warn('local publishes sessions', 'share.sessions is off here on purpose (opt-in)')
+    else add('local publishes sessions', false, 'nothing published while share.sessions is on')
   } catch (error) {
     add('local hello', false, error.message)
     return
