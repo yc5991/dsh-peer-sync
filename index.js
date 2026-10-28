@@ -182,13 +182,19 @@ function panelApi(engine, ctx) {
         return
       }
 
-      // Open the mounted project on the peer, so the turn runs there.
+      // Open a project on the peer: by local mounted path (translated) or by the
+      // peer's own path, so a project with no mount here can still be opened there.
       if (req.method === 'POST' && route === '/project/open') {
         const body = await readJsonBody(req)
         sendJson(
           res,
           200,
-          await engine.remoteOpenProject(body && body.peer, body && body.localPath, body && body.title),
+          await engine.remoteOpenProject(
+            body && body.peer,
+            body && body.localPath,
+            body && body.title,
+            body && body.remotePath,
+          ),
         )
         return
       }
