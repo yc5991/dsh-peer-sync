@@ -10,7 +10,7 @@
 // belongs to a different approval.
 
 import assert from 'node:assert/strict'
-import { openApproval, promptWindow, replyFromWindow, turnOpen } from '../lib/sync.js'
+import { endedAfter, openApproval, promptWindow, replyFromWindow, turnOpen } from '../lib/sync.js'
 
 const asked = (seq, id, tool = 'bash') => ({ event: { type: 'approval/asked', seq, data: { id, toolName: tool, reason: 'escalate sandbox' } }, seq })
 const decided = (seq, id, outcome = 'allowed-once') => ({ event: { type: 'approval/decided', seq, data: { id, outcome } }, seq })
@@ -96,3 +96,16 @@ assert.equal(promptWindow([]).reply, null)
 assert.equal(promptWindow(null).replies, 0)
 
 console.log('promptWindow: 6 cases ok')
+
+// "The turn ended" must mean *our* turn: the window normally still holds the end
+// of the previous one, and mistaking that for an answer-less finish returned
+// turn-ended-without-reply 2.4s after delivery while the real turn ran on.
+const base = 100
+assert.equal(endedAfter([kind('turn/end', 98)], base), false, 'an old end is not ours')
+assert.equal(endedAfter([kind('turn/end', 98), kind('turn/start', 101), kind('turn/end', 104)], base), true)
+assert.equal(endedAfter([kind('turn/start', 101), kind('turn/end', 98)], base), false, 'an end before the start is not ours')
+assert.equal(endedAfter([kind('turn/start', 101)], base), false, 'a turn still running has not ended')
+assert.equal(endedAfter([], base), false)
+assert.equal(endedAfter([kind('turn/start', 1), kind('turn/end', 2)], -1), true, 'without a cursor the window is all we have')
+
+console.log('endedAfter: 6 cases ok')
