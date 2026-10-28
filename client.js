@@ -804,6 +804,40 @@ window.__ModuleLoader__.load({
             Panel,
           ),
         )
+
+        // TEMPORARY probe for the session-row leading slot: it renders nothing and
+        // reports the props shape once, so the marker can be built against the real
+        // contract instead of a guess.
+        ctx.slots.inject('sidebar.session.row.leading', () =>
+          ctx.slots.register(
+            { name: 'sidebar.session.row.leading', id: 'peer-sync-probe', order: 90, label: L('探针', 'probe') },
+            (props = {}) => {
+              React.useEffect(() => {
+                try {
+                  const keys = Object.keys(props).sort().join(',')
+                  window.__PS_PROBED__ = window.__PS_PROBED__ || {}
+                  if (window.__PS_PROBED__[keys]) return
+                  window.__PS_PROBED__[keys] = true
+                  const sample = {}
+                  for (const [key, value] of Object.entries(props)) {
+                    if (value === null) sample[key] = 'null'
+                    else if (Array.isArray(value)) sample[key] = `array(${value.length})`
+                    else if (typeof value === 'object') sample[key] = `{${Object.keys(value).slice(0, 10).join(',')}}`
+                    else sample[key] = String(value).slice(0, 80)
+                  }
+                  void fetch('/api/peer-sync/client-probe', {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({ keys, sample }),
+                  })
+                } catch {
+                  /* a probe must never break the sidebar */
+                }
+              }, [])
+              return null
+            },
+          ),
+        )
       },
     }
   },

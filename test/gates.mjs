@@ -4,7 +4,7 @@
 // un-trusted, a panel that hid the peer's sessions when nothing was mirrored.
 
 import assert from 'node:assert/strict'
-import { mergeSessionList, remoteSessionsAllowed, sessionsPublished } from '../lib/sync.js'
+import { mapRemotePath, mergeSessionList, remoteSessionsAllowed, sessionsPublished } from '../lib/sync.js'
 import { identifyPeer, trustOf } from '../lib/config.js'
 import { titleFromSnapshot, titleOf } from '../lib/sessions.js'
 
@@ -94,5 +94,20 @@ assert.deepEqual(ordered.map((row) => row.id), ['b', 'a'])
 
 // junk in the advert must be skipped, not thrown on
 assert.equal(mergeSessionList([{ title: 'no id' }, null], {}, 'p').length, 0)
+
+// --- mapping a peer path onto this machine's mount ---------------------------
+const mounts = [{ remote: '/Volumes/DATA', local: 'Z:\\' }]
+assert.equal(mapRemotePath('/Volumes/DATA/ds', mounts), 'Z:\\ds')
+assert.equal(mapRemotePath('/Volumes/DATA/Projects/demo', mounts), 'Z:\\Projects\\demo')
+assert.equal(mapRemotePath('/Volumes/DATA', mounts), 'Z:\\')
+// a sibling whose name merely starts the same must not match
+assert.equal(mapRemotePath('/Volumes/DATA2/ds', mounts), null)
+// a path outside every mount, or nothing at all
+assert.equal(mapRemotePath('/Users/yicheng/ds', mounts), null)
+assert.equal(mapRemotePath('', mounts), null)
+assert.equal(mapRemotePath('/Volumes/DATA/ds', []), null)
+// a trailing slash on the mount is normalised away by the config loader, but the
+// mapper tolerates it too
+assert.equal(mapRemotePath('/Volumes/DATA/ds', [{ remote: '/Volumes/DATA/', local: 'Z:\\' }]), 'Z:\\ds')
 
 console.log('gates: ok')

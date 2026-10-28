@@ -208,6 +208,34 @@ curl.exe -H "x-peer-token: <对端 token>" `
 
 实测：预算 1 秒 → `turn-in-progress`（1.2 秒返回）→ 3 秒后 `running:true` → 8 秒后 `replied:true` + 正文，会话随后归档。
 
+## 对面项目出现在本机侧边栏（`remoteWorkspaces`）
+
+同一个文件夹在两台机器上路径不同：Mac 上是 `/Volumes/DATA/ds`，Windows 上如果挂载了那个共享就是 `Z:\ds`。插件可以按"路径翻译"把对面的项目注册成本机工作区——**不复制任何文件**，工作区直接指向挂载点，改动就是改对面的文件。
+
+```json
+{
+  "remoteWorkspaces": {
+    "register": true,
+    "mounts": [{ "remote": "/Volumes/DATA", "local": "Z:\\" }]
+  }
+}
+```
+
+规则：
+
+- 候选目录来自对端**会话通告里的 `cwd`**（已在跑的会话告诉你它们在哪个项目里），所以对面得开着 `share.sessions`
+- 只注册**现在真能 stat 到**的目录：挂载断了就不会留下一个点开是空的条目
+- 标题是 `<目录名> · <对端名>`（例：`ds · mac-lan`），本机自己的项目**不动**
+- `mounts` 只做整段路径前缀匹配，`/Volumes/DATA2` 不会被 `/Volumes/DATA` 吞掉
+
+实测：`Z:` 就是她那台的 `/Volumes/DATA`，配置后日志出现
+
+```
+remote workspace registered: Z:\ds as "ds · mac-lan"
+```
+
+侧边栏随即多出这一项，点开就是她那台的项目目录。
+
 ## 版本与冲突
 
 `cordis.patch.yml` **按条目合并**，不是整文件覆盖：
