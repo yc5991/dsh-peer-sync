@@ -554,6 +554,33 @@ window.__ModuleLoader__.load({
       return items.filter((item) => !item.archived)
     }
 
+    // Drawn rather than typed: an emoji in a font without its glyph becomes a tofu
+    // box, which the architecture figure showed happening in this very font family.
+    // Two 12px shapes cannot fail that way. Factory scope, so the panel legend and
+    // the sidebar marker always draw the same pair.
+    function PlaceIcon(props) {
+      const peer = props.peer
+      return h(
+        'svg',
+        {
+          width: 12,
+          height: 12,
+          viewBox: '0 0 12 12',
+          'aria-hidden': true,
+          style: { display: 'inline-block', verticalAlign: 'middle', color: 'currentColor' },
+        },
+        peer
+          ? h('path', {
+              d: 'M3.3 9.5h5.5a2.2 2.2 0 0 0 .15-4.4 2.9 2.9 0 0 0-5.5-.7A2.3 2.3 0 0 0 3.3 9.5z',
+              fill: 'currentColor',
+            })
+          : [
+              h('rect', { key: 'screen', x: 1.6, y: 2, width: 8.8, height: 6, rx: 1, fill: 'none', stroke: 'currentColor', strokeWidth: 1.2 }),
+              h('rect', { key: 'base', x: 4.4, y: 8.8, width: 3.2, height: 1.2, rx: 0.6, fill: 'currentColor' }),
+            ],
+      )
+    }
+
     function Panel() {
       const injected = typeof window === 'undefined' ? null : window.__DSH_PEER_SYNC__
       const [data, setData] = useState(injected)
@@ -801,8 +828,20 @@ window.__ModuleLoader__.load({
                   'No peer project registered yet. With remoteWorkspaces (register + mounts) the peer project appears in the sidebar as "<dir> · <peer>".',
                 ),
               ),
+          h(
+            'p',
+            { style: S.hint },
+            h(PlaceIcon, { peer: true }),
+            ' ',
+            L('在对端', 'on the peer'),
+            '     ',
+            h(PlaceIcon, { peer: false }),
+            ' ',
+            L('在本机', 'on this machine'),
+            '     ',
+            L('——侧边栏会话行前面画的就是这两个形状', '— the two shapes drawn before sidebar session rows'),
+          ),
         ),
-
         data.dav
           ? h(
               Section,
@@ -875,32 +914,6 @@ window.__ModuleLoader__.load({
           }
           placesCache = { at: now, promise }
           return promise
-        }
-
-        // Drawn rather than typed: an emoji in a font without its glyph becomes a
-        // tofu box, which the architecture figure showed happening in this very
-        // font family. Two 12px shapes cannot fail that way.
-        function PlaceIcon(props) {
-          const peer = props.peer
-          return h(
-            'svg',
-            {
-              width: 12,
-              height: 12,
-              viewBox: '0 0 12 12',
-              'aria-hidden': true,
-              style: { display: 'inline-block', verticalAlign: 'middle', color: 'currentColor' },
-            },
-            peer
-              ? h('path', {
-                  d: 'M3.3 9.5h5.5a2.2 2.2 0 0 0 .15-4.4 2.9 2.9 0 0 0-5.5-.7A2.3 2.3 0 0 0 3.3 9.5z',
-                  fill: 'currentColor',
-                })
-              : [
-                  h('rect', { key: 'screen', x: 1.6, y: 2, width: 8.8, height: 6, rx: 1, fill: 'none', stroke: 'currentColor', strokeWidth: 1.2 }),
-                  h('rect', { key: 'base', x: 4.4, y: 8.8, width: 3.2, height: 1.2, rx: 0.6, fill: 'currentColor' }),
-                ],
-          )
         }
 
         function SessionPlace(props) {
