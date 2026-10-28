@@ -752,6 +752,33 @@ window.__ModuleLoader__.load({
               ),
         ),
 
+        h(
+          Section,
+          { title: `${L('来自对端的项目', "The peer's projects")}${Array.isArray(data.remoteWorkspaces) && data.remoteWorkspaces.length ? ` (${data.remoteWorkspaces.length})` : ''}` },
+          Array.isArray(data.remoteWorkspaces) && data.remoteWorkspaces.length
+            ? h(
+                'div',
+                { style: { display: 'flex', flexDirection: 'column', gap: 6 } },
+                data.remoteWorkspaces.map((item) =>
+                  h(
+                    'div',
+                    { key: item.id, style: S.row },
+                    h('span', { style: S.dot(item.reachable ? 'var(--dsw-alias-state-success-primary)' : 'var(--dsw-alias-state-error-primary)') }),
+                    h('span', { style: S.name }, item.title),
+                    h('span', { style: S.dim }, `${item.sessions} ${L('个会话', 'sessions')} · ${item.path}`),
+                  ),
+                ),
+              )
+            : h(
+                'p',
+                { style: S.hint },
+                L(
+                  '还没有注册对面的项目。配置 remoteWorkspaces（register + mounts）后，对面会话所在的项目会以「<目录> · <对端>」出现在侧边栏。',
+                  'No peer project registered yet. With remoteWorkspaces (register + mounts) the peer project appears in the sidebar as "<dir> · <peer>".',
+                ),
+              ),
+        ),
+
         data.dav
           ? h(
               Section,

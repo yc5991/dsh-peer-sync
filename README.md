@@ -243,7 +243,17 @@ remote workspace registered: Z:\ds as "ds · mac-lan"
 - 🍎 这个会话的文件在**对端**（路径落在 `mounts[].local` 之下）
 - 💻 文件在**本机**
 
-判定在宿主侧完成（`placeOfSession`），随快照下发为 `sessionPlaces: { [sessionId]: 'local' | 'peer' }`。插槽传给组件的 props 只有 `sessionId` 和几个 hooks（探针实测：`renderFactorySlot, sessionId, useScan* …`），所以客户端只查表，不猜、也不逐行发请求。
+判定在宿主侧完成，随快照下发为 `sessionPlaces: { [sessionId]: 'local' | 'peer' }`。插槽传给组件的 props 只有 `sessionId` 和几个 hooks（探针实测：`renderFactorySlot, sessionId, useXxx…`），所以客户端只查表，不猜、也不逐行发请求。
+
+判定**先看工作区身份，再看 cwd**。这里踩过三个坑，都进了测试：
+
+1. `create()` 会把 `Z:\ds` **规范化**成 `\\10.77.0.2\DATA\ds` 存储，同一目录因此有两种路径形态；
+2. `create()` 对**已存在**的路径**不返回 id**，要用 `resolveByPath` 补；
+3. 解码出来的 UNC 会**少一个前导斜杠**（`\\host\share` → `/host/share`），所以所有路径比较先过 `slashKey`（反斜杠归一、折叠重复斜杠、去尾斜杠）。
+
+只看第 1 条，就会把"在对面工作区里正常创建的会话"标成本机 💻 —— 这是实际发生过的错误，而且只有盯着侧边栏看才发现。
+
+设置面板里也有一节「来自对端的项目」，列出注册了哪些、各挂几个会话、路径当前是否可达（挂载断了会变红）。
 
 觉得列表太吵的话，把 `client.js` 里 `peer ? '🍎' : '💻'` 的 `local` 分支改成 `null`，就只标对端。
 

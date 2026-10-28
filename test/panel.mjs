@@ -47,6 +47,10 @@ const snapshot = {
   dav: { watch: '/Volumes/dav', mounted: true, entries: 2, error: null, enabled: true },
   listening: true,
   bindError: null,
+  remoteWorkspaces: [
+    { id: 'w-1', title: 'ds · mac-lan', path: '\\\\10.77.0.2\\DATA\\ds', sessions: 1, reachable: true },
+  ],
+  sessionPlaces: {},
   diag: { build: '0.8.8', loadedFrom: 'file:///x/lib/sync.js', pid: 44476, uptimeMs: 300000, node: 'v24.21.0' },
   pairing: { mode: 'auto', port: 4401 },
   paths: { log: '~/.dsh/peer-sync/sync.log', config: '~/.dsh/peer-sync/config.json' },
@@ -140,6 +144,8 @@ const collapsed = renderPanel(snapshot).text
 assert.match(collapsed, /远程 · mac-lan/, 'each session row says which machine runs it')
 assert.match(collapsed, /问候/, 'titles survive to the panel')
 assert.match(collapsed, /上一条回话/, 'the last outcome survives a refresh')
+assert.match(collapsed, /来自对端的项目/, 'the panel lists the peer projects it registered')
+assert.match(collapsed, /ds · mac-lan/, 'with the workspace title the sidebar shows')
 assert.match(collapsed, /已镜像/, 'a mirrored copy is labelled')
 assert.match(collapsed, /在这里发一句/, 'the collapsed row offers the composer')
 assert.match(collapsed, /看最近结果/, 'and a way to peek at the last answer without sending')
