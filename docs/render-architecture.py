@@ -17,7 +17,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 with open(os.path.join(ROOT, "package.json"), encoding="utf-8") as handle:
     VERSION = json.load(handle)["version"]
 
-W, H = 1760, 1240
+W, H = 1760, 1280
 BG = "#F6F7F9"
 INK = "#1D2230"
 MUTED = "#5B6472"
@@ -160,13 +160,15 @@ ROWS = [
     ("设置面板渲染", "真机面板已渲染（用户确认）", DONE),
     ("会话生命周期（建/投/中断/归档）", "建→投 NEW-REMOTE；跨机归档 d7e8bd03 成功", DONE),
     ("等待循环：到期取回 / 结束即返", "1s 预算 → 8s 取回；中断后 8.5s 返回 ended", DONE),
+    ("对面项目进侧边栏 + 位置标记", "工作区已见（截图）；形状与取值已测，绘制待目视", PARTIAL),
 ]
 
 col_x = [72, 72 + (W - 144) // 2]
 row_h = 40
+per_col = (len(ROWS) + 1) // 2
 for i, (name, note, color) in enumerate(ROWS):
-    cx = col_x[0] if i < 6 else col_x[1]
-    ry = LY + 34 + (i % 6) * row_h
+    cx = col_x[0] if i < per_col else col_x[1]
+    ry = LY + 34 + (i % per_col) * row_h
     dot(cx + 8, ry + 12, color, r=6)
     text(cx + 26, ry + 3, name, 14, INK)
     text(cx + 26, ry + 22, note, 11, MUTED)

@@ -192,13 +192,28 @@ function renderMarker(place, slotName = 'sidebar.session.row.leading') {
       out.push(node)
       return out
     }
+    // Component elements have to be called to see what they draw.
+    if (typeof node.type === 'function') return collect(node.type(node.props || {}), out)
+    // The visible marker is an SVG (a font without emoji would paint a box), so the
+    // shape and the title are what identify it.
+    const props = node.props || {}
+    if (typeof node.type === 'string' && node.type !== 'svg') {
+      for (const key of ['title', 'd', 'fill']) {
+        if (typeof props[key] === 'string') out.push(props[key])
+      }
+    }
+    if (node.type === 'svg') out.push('svg')
     return collect(node.children, out)
   }
-  return collect(tree, []).join('')
+  return collect(tree, []).join(' ')
 }
 
-assert.equal(renderMarker('peer'), '🍎', "a session whose files are on the peer gets the apple")
-assert.equal(renderMarker('local'), '💻', 'a local session gets the laptop')
+const peerMarker = renderMarker('peer')
+const localMarker = renderMarker('local')
+assert.match(peerMarker, /对端/, 'a session whose files are on the peer says so in its title')
+assert.match(localMarker, /本机/, 'a local session says so')
+assert.match(peerMarker, /svg/, 'the marker is drawn, not typed: a missing emoji glyph would paint a box')
+assert.notEqual(peerMarker.replace(/对端|文件/g, ''), localMarker.replace(/本机|文件/g, ''), 'the two shapes differ')
 assert.equal(renderMarker(null), '', 'an unknown session draws nothing rather than guessing')
 // The hover card says the same thing in words, because a 16px cell is easy to miss.
 assert.match(renderMarker('peer', 'sidebar.session.row.hover'), /对端/, 'the hover card names the peer')

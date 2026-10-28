@@ -877,6 +877,32 @@ window.__ModuleLoader__.load({
           return promise
         }
 
+        // Drawn rather than typed: an emoji in a font without its glyph becomes a
+        // tofu box, which the architecture figure showed happening in this very
+        // font family. Two 12px shapes cannot fail that way.
+        function PlaceIcon(props) {
+          const peer = props.peer
+          return h(
+            'svg',
+            {
+              width: 12,
+              height: 12,
+              viewBox: '0 0 12 12',
+              'aria-hidden': true,
+              style: { display: 'inline-block', verticalAlign: 'middle', color: 'currentColor' },
+            },
+            peer
+              ? h('path', {
+                  d: 'M3.3 9.5h5.5a2.2 2.2 0 0 0 .15-4.4 2.9 2.9 0 0 0-5.5-.7A2.3 2.3 0 0 0 3.3 9.5z',
+                  fill: 'currentColor',
+                })
+              : [
+                  h('rect', { key: 'screen', x: 1.6, y: 2, width: 8.8, height: 6, rx: 1, fill: 'none', stroke: 'currentColor', strokeWidth: 1.2 }),
+                  h('rect', { key: 'base', x: 4.4, y: 8.8, width: 3.2, height: 1.2, rx: 0.6, fill: 'currentColor' }),
+                ],
+          )
+        }
+
         function SessionPlace(props) {
           const sessionId = props && props.sessionId ? props.sessionId : null
           const [place, setPlace] = useState(null)
@@ -906,7 +932,7 @@ window.__ModuleLoader__.load({
                 cursor: 'default',
               },
             },
-            peer ? '🍎' : '💻',
+            h(PlaceIcon, { peer }),
           )
         }
 
@@ -930,8 +956,8 @@ window.__ModuleLoader__.load({
             'div',
             { style: S.hint },
             peer
-              ? L('🍎 文件在对端（通过挂载）', '🍎 files on the peer, through a mount')
-              : L('💻 文件在本机', '💻 files on this computer'),
+              ? L('文件在对端（通过挂载）', 'files on the peer, through a mount')
+              : L('文件在本机', 'files on this computer'),
           )
         }
 
