@@ -1,0 +1,128 @@
+// One-command health check for a peer-sync install.
+//
+// Everything here is read-only against the peer; the only mutations are a
+// throwaway session on *this* machine, created and archived again, because the
+// delivery path cannot be proven without one. Exit code 1 if anything fails, so
+// it can be run by hand or from a script.
+//
+//   node test/smoke.mjs [--peer]
+
+import fs from 'node:fs'
+import path from 'node:path'
+
+const args = process.argv.slice(2)
+const withPeer = args.includes('--peer')
+
+const home = process.env.USERPROFILE || process.env.HOME || ''
+const configPath = path.join(home, '.dsh', 'peer-sync', 'config.json')
+const config = JSON.parse(fs.readFileSync(configPath, 'utf8').replace(/^\uFEFF/, ''))
+const listen = `http://${config.listen.host}:${config.listen.port}`
+const token = config.token
+const peer = Array.isArray(config.peers) ? config.peers[0] : null
+
+const rows = []
+const add = (name, ok, detail) => {
+  rows.push({ name, ok, detail })
+  console.log(`${ok ? 'PASS' : 'FAIL'}  ${name.padEnd(34)} ${detail || ''}`)
+}
+
+const call = async (base, route, init, peerToken) => {
+  const response = await fetch(base + route, {
+    ...(init || {}),
+    headers: { 'x-peer-token': peerToken || token, 'content-type': 'application/json', ...((init && init.headers) || {}) },
+  })
+  const text = await response.text()
+  let body = null
+  try {
+    body = text ? JSON.parse(text) : null
+  } catch {
+    body = { raw: text.slice(0, 120) }
+  }
+  return { status: response.status, body }
+}
+
+const post = (route, payload) => call(listen, route, { method: 'POST', body: JSON.stringify(payload) })
+
+const run = async () => {
+  // 1. This machine answers at all, and says which code it runs.
+  try {
+    const hello = await call(listen, '/v1/hello')
+    add('local hello', hello.status === 200 && hello.body.ok === true, `build ${hello.body.build || '?'} pid ${hello.body.diag ? hello.body.diag.pid : '?'}`)
+  } catch (error) {
+    add('local hello', false, error.message)
+    return
+  }
+
+  try {
+    const status = await call(listen, '/v1/status')
+    const units = status.body && status.body.status ? status.body.status.units : []
+    add('local status', status.status === 200, `${Array.isArray(units) ? units.length : '?'} units`)
+  } catch (error) {
+    add('local status', false, error.message)
+  }
+
+  // 2. The session lifecycle on this machine: create, deliver, answer, archive, restore.
+  let sessionId = null
+  try {
+    const created = await post('/v1/remote/session', { request: {} })
+    sessionId = created.body && created.body.sessionId
+    add('create session', Boolean(sessionId), created.body && (created.body.title || sessionId))
+  } catch (error) {
+    add('create session', false, error.message)
+  }
+
+  if (sessionId) {
+    try {
+      const sent = await post('/v1/remote/prompt', {
+        sessionId,
+        text: '只回复这一行，不要调用任何工具：SMOKE-OK',
+        wait: true,
+        waitSeconds: 90,
+      })
+      const answered = sent.body && sent.body.replied === true
+      add('deliver and answer', answered, answered ? `${sent.body.waitedMs}ms "${String(sent.body.reply).slice(0, 20)}"` : sent.body && sent.body.reason)
+      if (!answered) {
+        // A turn that never answered still has to be stoppable, or the session is
+        // stuck forever — that is exactly what /v1/remote/cancel is for.
+        const cancelled = await post('/v1/remote/cancel', { sessionId })
+        add('cancel stuck turn', cancelled.body && cancelled.body.ok === true, cancelled.body && (cancelled.body.reason || 'accepted'))
+        await new Promise((r) => setTimeout(r, 2500))
+      }
+    } catch (error) {
+      add('deliver and answer', false, error.message)
+    }
+
+    try {
+      const archived = await post('/v1/remote/session/archive', { sessionId })
+      add('archive session', archived.body && archived.body.ok === true, archived.body && String(archived.body.archived))
+      const restored = await post('/v1/remote/session/unarchive', { sessionId })
+      add('unarchive session', restored.body && restored.body.ok === true, restored.body && String(restored.body.archived))
+      await post('/v1/remote/session/archive', { sessionId })
+    } catch (error) {
+      add('archive session', false, error.message)
+    }
+  }
+
+  // 3. The peer, read-only.
+  if (withPeer && peer) {
+    try {
+      const hello = await call(peer.url, '/v1/hello', undefined, peer.token)
+      const ok = hello.status === 200 && hello.body.ok === true
+      const diag = hello.body && hello.body.diag
+      add('peer hello', ok, ok ? `build ${hello.body.build}${diag ? ` up ${Math.round(diag.uptimeMs / 60000)}m` : ''}` : `http ${hello.status}`)
+      const sessions = (hello.body && hello.body.sessions) || []
+      add('peer advertises sessions', Array.isArray(sessions) && sessions.length > 0, `${sessions.length} sessions`)
+    } catch (error) {
+      add('peer hello', false, error.message)
+    }
+  }
+
+  const failed = rows.filter((row) => !row.ok).length
+  console.log(`\n${rows.length - failed}/${rows.length} checks passed${withPeer ? '' : ' (peer skipped: run with --peer)'}`)
+  process.exitCode = failed === 0 ? 0 : 1
+}
+
+run().catch((error) => {
+  console.error('smoke test crashed:', error && error.message ? error.message : error)
+  process.exitCode = 1
+})

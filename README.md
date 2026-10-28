@@ -388,6 +388,29 @@ macOS 如果开了"应用防火墙"，首次绑定端口时允许 dsh（或 `nod
 
 ## 怎么确认在工作
 
+一条命令自检（只在**本机**建一个临时会话、用完归档；对端只读）：
+
+```powershell
+node test\smoke.mjs --peer
+```
+
+```
+PASS  local hello                        build 0.8.8 pid 44476
+PASS  local status                       11 units
+PASS  create session                     session-580149e7-…
+PASS  deliver and answer                 6031ms "SMOKE-OK"
+PASS  archive session                    true
+PASS  unarchive session                  false
+PASS  peer hello                         build 0.8.3
+PASS  peer advertises sessions           10 sessions
+
+8/8 checks passed
+```
+
+不带 `--peer` 就只查本机。任何一条 FAIL 都会让退出码非 0，可以挂进脚本。它检查的是"能不能真的投递并拿到回话"——不是端口通不通，那个 `local hello` 已经覆盖了。
+
+下面是手动的等价物：
+
 ```powershell
 # 本机视角
 Get-Content ~/.dsh/peer-sync/status.json -Encoding utf8

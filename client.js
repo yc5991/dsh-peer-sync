@@ -637,7 +637,10 @@ window.__ModuleLoader__.load({
         h(
           'p',
           { style: S.hint },
-          `${L('本机', 'this machine')} ${data.self || '?'} · ${L('监听', 'listen')} ${data.listen || '?'} · ${L('发现', 'discovery')} udp:${(data.pairing && data.pairing.port) || '?'} · ${units.count} ${L('个同步单元', 'units')}`,
+          `${L('本机', 'this machine')} ${data.self || '?'} · ${L('监听', 'listen')} ${data.listen || '?'} · ${L('发现', 'discovery')} udp:${(data.pairing && data.pairing.port) || '?'} · ${units.count} ${L('个同步单元', 'units')}` +
+            (data.diag && Number(data.diag.uptimeMs) >= 0
+              ? ` · build ${data.diag.build || '?'} · ${L('实例', 'up')} ${Math.max(1, Math.round(Number(data.diag.uptimeMs) / 60000))} ${L('分钟', 'min')}`
+              : ''),
         ),
 
         h(Section, { title: `${L('对端', 'Peers')} (${peers.length})` }, h(Peers, { peers, onChanged: refresh })),

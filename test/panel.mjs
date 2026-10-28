@@ -45,6 +45,7 @@ const snapshot = {
     ],
   },
   dav: { watch: '/Volumes/dav', mounted: true, entries: 2, error: null, enabled: true },
+  diag: { build: '0.8.8', loadedFrom: 'file:///x/lib/sync.js', pid: 44476, uptimeMs: 300000, node: 'v24.21.0' },
   pairing: { mode: 'auto', port: 4401 },
   paths: { log: '~/.dsh/peer-sync/sync.log', config: '~/.dsh/peer-sync/config.json' },
 }
@@ -145,6 +146,7 @@ assert.match(collapsed, /全部/, 'and back to everything')
 assert.doesNotMatch(collapsed, /\(无标题\)/, 'archived rows are hidden by default')
 assert.match(collapsed, /build 0\.8\.3/, 'the peer build is on the card, not in a round trip')
 assert.match(collapsed, /实例 12 分钟/, 'and how long that instance has been up')
+assert.match(collapsed, /实例 5 分钟/, 'the local instance age is on the same page')
 assert.match(collapsed, /中断对端回合/, 'and a way to stop a turn stuck over there')
 assert.match(collapsed, /撤销/, 'a trusted peer can be revoked')
 assert.match(collapsed, /在对端新建会话/, 'the peer card offers to create a session there')
