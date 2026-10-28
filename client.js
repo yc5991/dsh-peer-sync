@@ -258,7 +258,9 @@ window.__ModuleLoader__.load({
       const [open, setOpen] = useState(false)
       const [text, setText] = useState('')
       const [pending, setPending] = useState(false)
-      const [result, setResult] = useState(null)
+      // Seeded from the snapshot: a refresh used to erase what the last delivery
+      // said, which made the panel forget the answer it had just shown.
+      const [result, setResult] = useState(item.last || null)
       const [stopping, setStopping] = useState(false)
 
       const stop = async () => {
@@ -413,9 +415,11 @@ window.__ModuleLoader__.load({
                 ),
                 pending ? h('span', { style: S.dim }, L('对端在跑，最多等 120 秒', 'peer is running it, up to 120s')) : null,
               ),
-              h(Outcome, { value: result }),
             )
           : null,
+        // Outside the composer on purpose: the last answer is worth seeing without
+        // opening anything, and it is what a refresh used to erase.
+        h(Outcome, { value: result }),
       )
     }
 

@@ -40,7 +40,7 @@ const snapshot = {
     truncated: false,
     peers: [{ name: 'mac-lan', advertised: 10, at: '2026-10-27T06:27:50.498Z' }],
     items: [
-      { id: 'session-a', title: '问候', cwd: '/Volumes/DATA/ds', updatedAt: 1793078753859, size: 375539, archived: false, where: 'remote', peer: 'mac-lan', mirrored: true, advertised: true },
+      { id: 'session-a', title: '问候', cwd: '/Volumes/DATA/ds', updatedAt: 1793078753859, size: 375539, archived: false, where: 'remote', peer: 'mac-lan', mirrored: true, advertised: true, last: { at: '2026-10-27T06:00:00.000Z', replied: true, reply: '上一条回话', reason: null, waitedMs: 4200 } },
       { id: 'session-b', title: '', cwd: '/Volumes/DATA/ds', updatedAt: 1793074445038, size: 1690024, archived: true, where: 'remote', peer: 'mac-lan', mirrored: false, advertised: true },
     ],
   },
@@ -138,6 +138,7 @@ function renderPanel(data, options = {}) {
 const collapsed = renderPanel(snapshot).text
 assert.match(collapsed, /远程 · mac-lan/, 'each session row says which machine runs it')
 assert.match(collapsed, /问候/, 'titles survive to the panel')
+assert.match(collapsed, /上一条回话/, 'the last outcome survives a refresh')
 assert.match(collapsed, /已镜像/, 'a mirrored copy is labelled')
 assert.match(collapsed, /在这里发一句/, 'the collapsed row offers the composer')
 assert.match(collapsed, /看最近结果/, 'and a way to peek at the last answer without sending')
