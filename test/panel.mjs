@@ -32,7 +32,7 @@ const snapshot = {
       sessions: { count: 10, at: '2026-10-27T06:27:50.498Z' },
     },
   ],
-  bundles: { toInstall: ['dsh-pet'], needsManualInstall: [], stateDiff: [] },
+  bundles: { toInstall: ['dsh-pet'], needsManualInstall: [], stateDiff: [], peerAdvertised: 23 },
   sessions: {
     peer: 'mac-lan',
     self: 'win',
@@ -159,6 +159,12 @@ assert.doesNotMatch(collapsed, /undefined|NaN|\[object Object\]/, 'no placeholde
 const everyone = renderPanel(snapshot, { filter: 'all' }).text
 assert.match(everyone, /已归档/, 'an archived session is labelled when shown')
 assert.match(everyone, /取消归档/, 'an archived session offers to come back')
+
+// A peer that publishes no bundle set must say so instead of looking aligned.
+const silent = renderPanel({ ...snapshot, bundles: { toInstall: [], needsManualInstall: [], stateDiff: [], peerAdvertised: 0 } }).text
+assert.match(silent, /没有通告插件集/, 'an empty peer bundle advert is called out')
+const aligned = renderPanel({ ...snapshot, bundles: { toInstall: [], needsManualInstall: [], stateDiff: [], peerAdvertised: 23 } }).text
+assert.match(aligned, /没有需要补装的/, 'a real aligned set still reads as aligned')
 
 // Every false state flipped: the composer is open and the send button is busy.
 const open = renderPanel(snapshot, { open: true }).text

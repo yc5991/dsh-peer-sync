@@ -657,13 +657,17 @@ window.__ModuleLoader__.load({
         h(
           Section,
           { title: L('对端缺少的插件', 'Bundles the peer lacks') },
-          bundles.toInstall && bundles.toInstall.length
-            ? h(
-                'ul',
-                { style: S.list },
-                bundles.toInstall.map((item, index) => h('li', { key: index, style: S.code }, `+ ${item}`)),
-              )
-            : h('p', { style: S.hint }, L('没有需要补装的。', 'Nothing to install.')),
+          // "Nothing to install" and "the peer publishes no set at all" look the
+          // same in a list of missing items, and only one of them is good news.
+          bundles.peerAdvertised === 0
+            ? h('p', { style: S.hint }, L('对端没有通告插件集（它那侧 sync.bundles 关着）：这里看不出差异，不代表两边一致。', 'The peer publishes no bundle list (its sync.bundles is off), so an empty diff here means nothing.'))
+            : bundles.toInstall && bundles.toInstall.length
+              ? h(
+                  'ul',
+                  { style: S.list },
+                  bundles.toInstall.map((item, index) => h('li', { key: index, style: S.code }, `+ ${item}`)),
+                )
+              : h('p', { style: S.hint }, L('没有需要补装的。', 'Nothing to install.')),
           bundles.needsManualInstall && bundles.needsManualInstall.length
             ? h(
                 'p',

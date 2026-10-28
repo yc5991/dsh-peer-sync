@@ -1,6 +1,6 @@
 {
   "name": "dsh-peer-sync",
-  "version": "0.8.9",
+  "version": "0.9.0",
   "private": true,
   "type": "module",
   "description": "Keeps profile configuration, credential refs and agent presets identical across two DSH machines linked by a direct cable.",
