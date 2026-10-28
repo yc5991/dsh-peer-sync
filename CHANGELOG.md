@@ -17,6 +17,11 @@
 - **0.11.8** 面板加图例，画出这两个形状。
 - **0.11.9** 仓库可发布性：`package.json` 补 license / repository / homepage / bugs / keywords；新增本文件；`test/docs.mjs` 断言这些元数据，并要求本文件里必须出现"未验证"。
 
+## 0.12.3 — 上游需求草稿与图的准确性
+
+- `docs/upstream-workspace-slot.md`：工作区行插槽需求的草稿（形状、props、现有插槽为何都不合适、三种替代方案的代价、字符实测）。
+- 架构图中心列补齐实际路由（`remote/result`、`remote/cancel`、`remote/session`），`client.js` 描述加上对面项目与位置标记；连线面板高度改为按路由数计算（原来按模块数，第 9 条会掉到框外），信任条与账本随之下移，画布高度 1340。
+
 ## 0.12.2 — 没有挂载也能在对端打开
 
 - `POST /api/peer-sync/project/open` 增加 `remotePath` 参数：直接给对面路径就不需要本机挂载（只挂载了对面一部分目录时有用）。

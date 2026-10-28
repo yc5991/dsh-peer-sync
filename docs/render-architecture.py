@@ -17,7 +17,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 with open(os.path.join(ROOT, "package.json"), encoding="utf-8") as handle:
     VERSION = json.load(handle)["version"]
 
-W, H = 1760, 1280
+W, H = 1760, 1340
 BG = "#F6F7F9"
 INK = "#1D2230"
 MUTED = "#5B6472"
@@ -78,7 +78,7 @@ BOXES = [
     ("sync.js", "同步引擎：15s tick、三方合并、投递与会话"),
     ("sessions.js", "会话通告与标题（sessionQuery + 投影文件）"),
     ("webdav.js", "把共享目录暴露成 WebDAV"),
-    ("client.js", "设置面板：对端、插件集、会话（远程/镜像）"),
+    ("client.js", "设置面板：对端、插件集、会话、对面项目；会话行位置标记"),
 ]
 
 
@@ -101,14 +101,20 @@ column(W - 56 - COL_W, "macOS 实例", "~/.dsh/profiles/desktop/node_modules/dsh
 # ------------------------------------------------------------------ the link
 LX = 56 + COL_W + 40
 LW = W - 56 - COL_W - 40 - LX
-box(LX, TOP - 70, LW, 70 + len(BOXES) * (BOX_H + GAP) - GAP, fill=LINK_FILL, line=LINK_LINE, radius=12)
+# The centre column holds more rows than the module columns do, so its box is sized
+# from the flows; sizing it from BOXES left the last endpoint outside the panel.
+LINK_ROWS = 9
+box(LX, TOP - 70, LW, 70 + LINK_ROWS * 66 - 8, fill=LINK_FILL, line=LINK_LINE, radius=12)
 text(LX + 16, TOP - 60, "直连链路（无 SMB、无账号）", 16, INK, bold=True)
 
 FLOWS = [
     ("UDP :4401", "广播发现，令牌指纹互认", "双向"),
     ("POST /v1/pair", "各发一枚专用密钥（0.4.0）", "→"),
-    ("GET /v1/hello", "单元清单 + 通告 + build", "双向"),
+    ("GET /v1/hello", "单元清单 + 通告 + build + diag", "双向"),
     ("POST /v1/remote/prompt", "投递到对端会话，对端额度执行", "→"),
+    ("GET /v1/remote/result", "只读：回合到哪一步、最后说了什么", "→"),
+    ("POST /v1/remote/cancel", "中断对端正在跑的回合", "→"),
+    ("POST /v1/remote/session", "在对端建会话（可在对端打开项目）", "→"),
     ("GET /v1/session", "按 id 取会话日志（只读）", "←"),
     ("WebDAV /dav", "挂载共享目录，实时读写", "双向"),
 ]
@@ -126,7 +132,8 @@ for yy in (TOP + 20, TOP + 150, TOP + 290, TOP + 430):
     arrow(LX + LW + 6, yy, W - 56 - COL_W - 6, yy, color="#9AA4B4")
 
 # --------------------------------------------------------------- auth strip
-AY = TOP + len(BOXES) * (BOX_H + GAP) + 34
+# Below whichever column is taller, so the tinted link panel cannot run into it.
+AY = TOP + max(len(BOXES) * (BOX_H + GAP), LINK_ROWS * 66) + 34
 box(56, AY, W - 112, 96, fill=WHITE, line=LINE, radius=12)
 text(72, AY + 12, "信任模型", 16, INK, bold=True)
 
