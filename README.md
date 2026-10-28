@@ -261,6 +261,8 @@ remote workspace registered: Z:\ds as "ds · mac-lan"
 
 觉得列表太吵的话，把 `client.js` 里 `SessionPlace` 的 `local` 分支改成 `return null`，就只标对端。
 
+**项目行本身没法标记**：工作区行没有可注入的插槽（`sidebar.workspaces` 只能整块替换），而字符方案实测会变方框（`msyhbd` 里 `☁` 是方框）。所以项目行的标识落在标题文字里（`· mac-lan`）。要"项目行右侧一个图形"只能靠上游加插槽，需求草稿写在 `docs/upstream-workspace-slot.md`。
+
 ### 在对端打开这个项目（用对面的额度）
 
 在 `ds · mac-lan` 里直接开会话，回合跑在**本机**（文件走挂载）——这和你最初要的"消耗对面的额度、按对面的权限"正好相反。所以面板那一节每行有个「在对端打开」按钮：
