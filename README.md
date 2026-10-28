@@ -236,6 +236,17 @@ remote workspace registered: Z:\ds as "ds · mac-lan"
 
 侧边栏随即多出这一项，点开就是她那台的项目目录。
 
+### 会话行前面的 🍎 / 💻
+
+工作区行没有可注入的插槽，但**会话行**有：`sidebar.session.row.leading`（标题前那个 16px 格）。插件在那里放一个字符：
+
+- 🍎 这个会话的文件在**对端**（路径落在 `mounts[].local` 之下）
+- 💻 文件在**本机**
+
+判定在宿主侧完成（`placeOfSession`），随快照下发为 `sessionPlaces: { [sessionId]: 'local' | 'peer' }`。插槽传给组件的 props 只有 `sessionId` 和几个 hooks（探针实测：`renderFactorySlot, sessionId, useScan* …`），所以客户端只查表，不猜、也不逐行发请求。
+
+觉得列表太吵的话，把 `client.js` 里 `peer ? '🍎' : '💻'` 的 `local` 分支改成 `null`，就只标对端。
+
 ## 版本与冲突
 
 `cordis.patch.yml` **按条目合并**，不是整文件覆盖：

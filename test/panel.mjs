@@ -101,8 +101,9 @@ function renderPanel(data, options = {}) {
       inject(_name, run) {
         run()
       },
-      register(_meta, registered) {
-        component = registered
+      register(meta, registered) {
+        // The plugin registers two slots now; this test is about the settings tab.
+        if (meta && meta.name === 'settings.plugins.tab') component = registered
       },
     },
   })

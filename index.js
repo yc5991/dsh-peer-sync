@@ -1,8 +1,5 @@
-import fs from 'node:fs'
-import path from 'node:path'
 import { SyncEngine } from './lib/sync.js'
 import { serviceOf } from './lib/services.js'
-import { dshHome } from './lib/paths.js'
 
 export const name = 'peer-sync'
 
@@ -194,31 +191,6 @@ function panelApi(engine, ctx) {
           ? await engine.remoteFetchResult(body.peer, body.sessionId)
           : await engine.remoteResultRequest(body && body.sessionId)
         sendJson(res, 200, answer)
-        return
-      }
-
-      // TEMPORARY probe: the client slot's props are undocumented, so the panel
-      // reports what it receives here and the shape is read from disk instead of
-      // guessed. Remove once the marker is implemented.
-      if (req.method === 'POST' && route === '/client-probe') { // TEMPORARY
-        const body = await readJsonBody(req)
-        const file = path.join(dshHome(), 'peer-sync', 'client-probe.json')
-        let previous = {}
-        try {
-          previous = JSON.parse(fs.readFileSync(file, 'utf8'))
-        } catch {
-          previous = {}
-        }
-        const key = String(body && body.keys ? body.keys : 'unknown')
-        if (!previous[key]) {
-          previous[key] = { at: new Date().toISOString(), sample: (body && body.sample) || null }
-          try {
-            fs.writeFileSync(file, `${JSON.stringify(previous, null, 2)}\n`)
-          } catch {
-            /* the probe is best effort */
-          }
-        }
-        sendJson(res, 200, { ok: true, known: Object.keys(previous) })
         return
       }
 
