@@ -182,6 +182,17 @@ function panelApi(engine, ctx) {
         return
       }
 
+      // Open the mounted project on the peer, so the turn runs there.
+      if (req.method === 'POST' && route === '/project/open') {
+        const body = await readJsonBody(req)
+        sendJson(
+          res,
+          200,
+          await engine.remoteOpenProject(body && body.peer, body && body.localPath, body && body.title),
+        )
+        return
+      }
+
       if (req.method === 'POST' && route === '/cancel') {
         const body = await readJsonBody(req)
         // With a peer, cancel over there; without one, cancel here.

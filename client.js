@@ -588,6 +588,8 @@ window.__ModuleLoader__.load({
       const [failure, setFailure] = useState(null)
       const [filter, setFilter] = useState('active')
       const [scanning, setScanning] = useState(false)
+      const [opening, setOpening] = useState(null)
+      const [opened, setOpened] = useState(null)
 
       // The page carries one snapshot; every write path re-reads it instead of
       // patching local state, so what the panel shows is what the engine has.
@@ -817,6 +819,27 @@ window.__ModuleLoader__.load({
                     h('span', { style: S.dot(item.reachable ? 'var(--dsw-alias-state-success-primary)' : 'var(--dsw-alias-state-error-primary)') }),
                     h('span', { style: S.name }, item.title),
                     h('span', { style: S.dim }, `${item.sessions} ${L('个会话', 'sessions')} · ${item.path}`),
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        style: S.button,
+                        onClick: async () => {
+                          setOpening(item.id)
+                          try {
+                            const answer = await api('/project/open', {
+                              method: 'POST',
+                              body: JSON.stringify({ peer: item.peer, localPath: item.path }),
+                            })
+                            setOpened({ id: item.id, text: answer && answer.ok ? `${L('已在对面打开', 'opened there')}: ${answer.sessionId}` : `${L('打不开', 'failed')}: ${(answer && (answer.hint || answer.reason)) || '?'}` })
+                          } finally {
+                            setOpening(null)
+                          }
+                        },
+                        disabled: opening === item.id,
+                      },
+                      opening === item.id ? L('打开中…', 'Opening…') : L('在对端打开', 'Open there'),
+                    ),
                   ),
                 ),
               )
@@ -841,6 +864,7 @@ window.__ModuleLoader__.load({
             '     ',
             L('——侧边栏会话行前面画的就是这两个形状', '— the two shapes drawn before sidebar session rows'),
           ),
+          opened ? h('p', { style: S.hint }, `${L('上次操作', 'last action')}: ${opened.text}`) : null,
         ),
         data.dav
           ? h(

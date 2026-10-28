@@ -227,6 +227,7 @@ assert.match(collapsed, /来自对端的项目/, 'the panel lists the peer proje
 assert.match(collapsed, /ds · mac-lan/, 'with the workspace title the sidebar shows')
 assert.match(collapsed, /在对端/, 'the panel draws its own legend for the two shapes')
 assert.match(collapsed, /在本机/, 'so the pair can be recognised without hunting a row')
+assert.match(collapsed, /在对端打开/, 'a mounted project can be opened on the peer, where its quota lives')
 assert.match(collapsed, /已镜像/, 'a mirrored copy is labelled')
 assert.match(collapsed, /在这里发一句/, 'the collapsed row offers the composer')
 assert.match(collapsed, /看最近结果/, 'and a way to peek at the last answer without sending')

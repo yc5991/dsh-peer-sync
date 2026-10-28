@@ -261,6 +261,19 @@ remote workspace registered: Z:\ds as "ds · mac-lan"
 
 觉得列表太吵的话，把 `client.js` 里 `SessionPlace` 的 `local` 分支改成 `return null`，就只标对端。
 
+### 在对端打开这个项目（用对面的额度）
+
+在 `ds · mac-lan` 里直接开会话，回合跑在**本机**（文件走挂载）——这和你最初要的"消耗对面的额度、按对面的权限"正好相反。所以面板那一节每行有个「在对端打开」按钮：
+
+```
+POST /api/peer-sync/project/open {"localPath": "Z:\\ds"}
+→ {"ok":true,"sessionId":"session-9049a969-…","remotePath":"/Volumes/DATA/ds","peer":"mac-lan"}
+```
+
+它把 `Z:\ds` **反向翻译**成对面自己的路径 `/Volumes/DATA/ds`，让对端用那个 cwd 建会话。实测：她的会话列表里立刻出现 `cwd: /Volumes/DATA/ds` 的会话，标题就是请求里带的那个。
+
+反向映射和正向共用同一套 `slashKey` 归一（大小写、斜杠、尾斜杠），并且有往返测试：`mapLocalToRemote(mapRemotePath(x)) === x`。
+
 ## 版本与冲突
 
 `cordis.patch.yml` **按条目合并**，不是整文件覆盖：

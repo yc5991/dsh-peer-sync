@@ -73,6 +73,7 @@ config.remoteWorkspaces{register, mounts[{remote, local}]}
 | `POST /api/peer-sync/session/archive` | GUI 服务器 | loopback | 归档（带 `peer` 走对端，不带走本机） |
 | `POST /api/peer-sync/session/unarchive` | GUI 服务器 | loopback | 取消归档（同上） |
 | `POST /api/peer-sync/workspaces/refresh` | GUI 服务器 | loopback | 立刻重扫挂载点并注册对面项目 |
+| `POST /api/peer-sync/project/open` | GUI 服务器 | loopback | 把挂载路径反向翻译后，在**对端**建会话打开该项目 |
 | `POST /api/peer-sync/trust` | GUI 服务器 | loopback | 撤销 / 恢复对端 |
 | `GET /api/peer-sync/introspect` | GUI 服务器 | loopback | 只读：查宿主服务的方法与元数（白名单） |
 | `POST /v1/pair` | 对端监听器 | 配对策略 | 交换每对一枚密钥 |

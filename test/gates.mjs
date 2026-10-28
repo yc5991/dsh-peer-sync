@@ -4,7 +4,7 @@
 // un-trusted, a panel that hid the peer's sessions when nothing was mirrored.
 
 import assert from 'node:assert/strict'
-import { mapRemotePath, mergeSessionList, placeOfSession, remoteSessionsAllowed, sessionsPublished, underAny } from '../lib/sync.js'
+import { mapLocalToRemote, mapRemotePath, mergeSessionList, placeOfSession, remoteSessionsAllowed, sessionsPublished, underAny } from '../lib/sync.js'
 import { identifyPeer, trustOf } from '../lib/config.js'
 import { titleFromSnapshot, titleOf } from '../lib/sessions.js'
 
@@ -121,5 +121,16 @@ assert.equal(underAny('/10.77.0.2/DATA/ds', ['\\\\10.77.0.2\\DATA\\ds']), true, 
 assert.equal(underAny('\\\\10.77.0.2\\DATA\\ds\\bili-whale', ['\\\\10.77.0.2\\DATA\\ds']), true)
 assert.equal(underAny('C:\\Users\\user\\ds', ['\\\\10.77.0.2\\DATA\\ds']), false)
 assert.equal(underAny('/10.77.0.2/DATA/ds2', ['\\\\10.77.0.2\\DATA\\ds']), false, 'a sibling prefix is not inside')
+
+// --- the inverse: a path here back to the peer's own path --------------------
+// Needed to open the mounted project *there*, where the quota and permissions are.
+const reverse = [{ remote: '/Volumes/DATA', local: 'Z:\\' }]
+assert.equal(mapLocalToRemote('Z:\\ds', reverse), '/Volumes/DATA/ds')
+assert.equal(mapLocalToRemote('Z:\\ds\\bili-whale', reverse), '/Volumes/DATA/ds/bili-whale')
+assert.equal(mapLocalToRemote('Z:\\', reverse), '/Volumes/DATA')
+assert.equal(mapLocalToRemote('C:\\Users\\user\\Documents', reverse), null)
+assert.equal(mapLocalToRemote('', reverse), null)
+// round trip: every mapped peer path comes back unchanged
+assert.equal(mapLocalToRemote(mapRemotePath('/Volumes/DATA/ds', mounts), reverse), '/Volumes/DATA/ds')
 
 console.log('gates: ok')

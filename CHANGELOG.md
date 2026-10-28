@@ -17,6 +17,12 @@
 - **0.11.8** 面板加图例，画出这两个形状。
 - **0.11.9** 仓库可发布性：`package.json` 补 license / repository / homepage / bugs / keywords；新增本文件；`test/docs.mjs` 断言这些元数据，并要求本文件里必须出现"未验证"。
 
+## 0.12.1 — 在对端打开挂载的项目
+
+- 新增 `POST /api/peer-sync/project/open` 与面板「在对端打开」按钮：把本地挂载路径**反向翻译**成对面路径（`mapLocalToRemote`），让对端用**它自己的 cwd** 建会话，于是回合跑在对面（对面的额度与权限）。
+- 实测（跨机）：请求 `Z:\ds` → 响应 `remotePath: /Volumes/DATA/ds`，她的会话列表里出现 `cwd: /Volumes/DATA/ds` 的新会话。
+- 反向映射与正向共用 `slashKey`，含往返用例。
+
 ## 0.12.0 — 文档与代码对账
 
 - 架构文档补「对面的项目怎么出现在这台」的数据流（配置 → 候选 cwd → 路径映射 → stat → create → 身份 → sessionPlaces → 插槽），并补 `lib/log.js` 一行。
