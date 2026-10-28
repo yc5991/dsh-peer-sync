@@ -560,6 +560,7 @@ window.__ModuleLoader__.load({
       const [refreshing, setRefreshing] = useState(!injected)
       const [failure, setFailure] = useState(null)
       const [filter, setFilter] = useState('active')
+      const [scanning, setScanning] = useState(false)
 
       // The page carries one snapshot; every write path re-reads it instead of
       // patching local state, so what the panel shows is what the engine has.
@@ -755,6 +756,29 @@ window.__ModuleLoader__.load({
         h(
           Section,
           { title: `${L('来自对端的项目', "The peer's projects")}${Array.isArray(data.remoteWorkspaces) && data.remoteWorkspaces.length ? ` (${data.remoteWorkspaces.length})` : ''}` },
+          h(
+            'div',
+            { style: S.row },
+            h(
+              'button',
+              {
+                type: 'button',
+                style: S.button,
+                onClick: async () => {
+                  setScanning(true)
+                  try {
+                    await api('/workspaces/refresh', { method: 'POST', body: '{}' })
+                    if (props.onChanged) props.onChanged()
+                  } finally {
+                    setScanning(false)
+                  }
+                },
+                disabled: scanning,
+              },
+              scanning ? L('扫描中…', 'Scanning…') : L('重新扫描挂载', 'Rescan mounts'),
+            ),
+            h('span', { style: S.dim }, L('刚映射好驱动器时用', 'after mapping a drive')),
+          ),
           Array.isArray(data.remoteWorkspaces) && data.remoteWorkspaces.length
             ? h(
                 'div',
@@ -834,19 +858,23 @@ window.__ModuleLoader__.load({
 
         // Which sessions have their files on the other machine. The slot hands over
         // a sessionId only, and the host already computed the answer — so this is a
-        // lookup in one snapshot, not a second query per row.
-        let placesPromise = null
-        function sessionPlaces() {
-          if (!placesPromise) {
-            const injected = typeof window === 'undefined' ? null : window.__DSH_PEER_SYNC__
-            if (injected && injected.sessionPlaces) placesPromise = Promise.resolve(injected.sessionPlaces)
-            else {
-              placesPromise = api('/snapshot')
-                .then((value) => (value && value.ok && value.snapshot && value.snapshot.sessionPlaces) || {})
-                .catch(() => ({}))
-            }
+        // lookup in one snapshot, not a second query per row. Cached briefly: an
+        // answer kept for the life of the page meant a session created after load
+        // never got its marker until someone reloaded.
+        let placesCache = null
+        function sessionPlaces(force) {
+          const now = Date.now()
+          if (!force && placesCache && now - placesCache.at < 20000) return placesCache.promise
+          let promise
+          const injected = typeof window === 'undefined' ? null : window.__DSH_PEER_SYNC__
+          if (injected && injected.sessionPlaces) promise = Promise.resolve(injected.sessionPlaces)
+          else {
+            promise = api('/snapshot')
+              .then((value) => (value && value.ok && value.snapshot && value.snapshot.sessionPlaces) || {})
+              .catch(() => ({}))
           }
-          return placesPromise
+          placesCache = { at: now, promise }
+          return promise
         }
 
         function SessionPlace(props) {

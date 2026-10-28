@@ -47,6 +47,7 @@ python docs\render-flow.py           # -> docs/flow.png
 | `POST /api/peer-sync/session/remote` | GUI 服务器 | loopback | 面板 → 对端新建会话 |
 | `POST /api/peer-sync/session/archive` | GUI 服务器 | loopback | 归档（带 `peer` 走对端，不带走本机） |
 | `POST /api/peer-sync/session/unarchive` | GUI 服务器 | loopback | 取消归档（同上） |
+| `POST /api/peer-sync/workspaces/refresh` | GUI 服务器 | loopback | 立刻重扫挂载点并注册对面项目 |
 | `POST /api/peer-sync/trust` | GUI 服务器 | loopback | 撤销 / 恢复对端 |
 | `GET /api/peer-sync/introspect` | GUI 服务器 | loopback | 只读：查宿主服务的方法与元数（白名单） |
 | `POST /v1/pair` | 对端监听器 | 配对策略 | 交换每对一枚密钥 |

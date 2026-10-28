@@ -174,6 +174,14 @@ function panelApi(engine, ctx) {
         return
       }
 
+      // Rescan the mounts now instead of waiting for the next tick: a drive that was
+      // just mapped should not need the interval to elapse before it is usable.
+      if (req.method === 'POST' && route === '/workspaces/refresh') {
+        await engine.ensureRemoteWorkspaces({ force: true })
+        sendJson(res, 200, { ok: true, workspaces: engine.remoteWorkspaceList() })
+        return
+      }
+
       if (req.method === 'POST' && route === '/cancel') {
         const body = await readJsonBody(req)
         // With a peer, cancel over there; without one, cancel here.
