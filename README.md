@@ -518,6 +518,7 @@ docs/               架构图 + 流程图 + 同源 Mermaid 源码（architecture
 test/approval.mjs   等待循环的每个判断（答案 / 审批 / 回合开闭，取自真实事件序列）
 test/gates.mjs      谁能取会话、谁能被投递、谁能被信任、面板行合并
 test/advert.mjs     通告缓存的水合（好 / 空 / 坏 / 形状不对 / 不存在）
+test/docs.mjs       路由与文档对账（两边都查，防止表格过期）
 test/panel.mjs      面板渲染树（替身 React，断言用户读到的文字）
 test/peer.mjs       独立双节点验证脚本（假 credentials + 假 pluginManager）
 ```
