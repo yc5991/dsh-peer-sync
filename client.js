@@ -910,6 +910,38 @@ window.__ModuleLoader__.load({
           )
         }
 
+        // The same fact in words, in the row's hover card: the leading cell is 16px
+        // and might not be read at a glance, and this costs nothing.
+        function SessionPlaceHover(props) {
+          const sessionId = props && props.sessionId ? props.sessionId : null
+          const [place, setPlace] = useState(null)
+          React.useEffect(() => {
+            let alive = true
+            void sessionPlaces().then((map) => {
+              if (alive) setPlace((map && sessionId && map[sessionId]) || null)
+            })
+            return () => {
+              alive = false
+            }
+          }, [sessionId])
+          if (!place) return null
+          const peer = place === 'peer'
+          return h(
+            'div',
+            { style: S.hint },
+            peer
+              ? L('🍎 文件在对端（通过挂载）', '🍎 files on the peer, through a mount')
+              : L('💻 文件在本机', '💻 files on this computer'),
+          )
+        }
+
+        ctx.slots.inject('sidebar.session.row.hover', () =>
+          ctx.slots.register(
+            { name: 'sidebar.session.row.hover', id: 'peer-sync-place-hover', order: 50, label: L('位置', 'where') },
+            SessionPlaceHover,
+          ),
+        )
+
         ctx.slots.inject('sidebar.session.row.leading', () =>
           ctx.slots.register(
             { name: 'sidebar.session.row.leading', id: 'peer-sync-place', order: 90, label: L('位置', 'where') },

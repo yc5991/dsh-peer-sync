@@ -147,7 +147,7 @@ function renderPanel(data, options = {}) {
 }
 
 /** The glyph the session-row marker draws for a given place. */
-function renderMarker(place) {
+function renderMarker(place, slotName = 'sidebar.session.row.leading') {
   const source = fs.readFileSync(new URL('../client.js', import.meta.url), 'utf8')
   const React = {
     createElement(type, props, ...children) {
@@ -176,7 +176,7 @@ function renderMarker(place) {
     slots: {
       inject: (_name, run) => run(),
       register: (meta, registered) => {
-        if (meta && meta.name === 'sidebar.session.row.leading') row = registered
+        if (meta && meta.name === slotName) row = registered
       },
     },
   })
@@ -200,6 +200,9 @@ function renderMarker(place) {
 assert.equal(renderMarker('peer'), '🍎', "a session whose files are on the peer gets the apple")
 assert.equal(renderMarker('local'), '💻', 'a local session gets the laptop')
 assert.equal(renderMarker(null), '', 'an unknown session draws nothing rather than guessing')
+// The hover card says the same thing in words, because a 16px cell is easy to miss.
+assert.match(renderMarker('peer', 'sidebar.session.row.hover'), /对端/, 'the hover card names the peer')
+assert.match(renderMarker('local', 'sidebar.session.row.hover'), /本机/, 'and names this machine')
 
 const collapsed = renderPanel(snapshot).text
 assert.match(collapsed, /远程 · mac-lan/, 'each session row says which machine runs it')
