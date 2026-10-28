@@ -456,6 +456,16 @@ loaded from file:///…/dsh-peer-sync/lib/sync.js build=0.8.5 pid=44476
 日志：`~/.dsh/peer-sync/sync.log`（UTF-8，PowerShell 读取请加 `-Encoding utf8`）。
 无 token 的请求一律 401。
 
+## 升级另一台机器（对方 agent 不可用时）
+
+共享目录里放了一个脚本（Windows 侧路径 C:\\Users\\<你>\\DSH\\Projects\\upgrade-peer-sync.sh，Mac 侧是挂载点下的 upgrade-peer-sync.sh）：它固定 pin、安装、用 bundle 摘/放触发重载，最后打印 uild 和 loadedFrom。先读一遍再跑：
+
+`powershell
+bash /Volumes/dav/upgrade-peer-sync.sh d30617f
+`
+
+它只碰 ~/.dsh/profiles/desktop/package.json（先备份）、装包、摘放 bundle，然后用 uild 自证。这一步不依赖对方机器上的 agent——当那边的模型调用在重试、或者它的会话被归档到看不见时，这是唯一还能推进升级的路。
+
 ## 已知局限
 
 - 插件集只做"补齐"，不做"移除"；`link:`/本地路径的包只能在目标机手动装（`dsh-peer-sync` 自己就属于这类）。
