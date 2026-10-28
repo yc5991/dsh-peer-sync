@@ -148,6 +148,31 @@ const run = async () => {
     }
   }
 
+  // 4. The peer projects this machine registered on a mount, when it is configured
+  //    to have any. A workspace whose path no longer resolves opens onto nothing,
+  //    which is worth failing over.
+  const remoteConfigured = Boolean(config.remoteWorkspaces && config.remoteWorkspaces.register === true)
+  if (remoteConfigured) {
+    try {
+      // The panel block lives in the status file, which every tick rewrites.
+      const statusPath = path.join(home, '.dsh', 'peer-sync', 'status.json')
+      const status = JSON.parse(fs.readFileSync(statusPath, 'utf8').replace(/^\uFEFF/, ''))
+      const list = Array.isArray(status.remoteWorkspaces) ? status.remoteWorkspaces : []
+      if (list.length > 0) {
+        const broken = list.filter((item) => item && item.reachable === false)
+        add(
+          'peer projects registered',
+          broken.length === 0,
+          `${list.length} workspace(s)${broken.length ? `, unreachable: ${broken.map((item) => item.title).join(', ')}` : ''}`,
+        )
+      } else {
+        warn('peer projects registered', 'remoteWorkspaces is on but nothing matched a mount (does the peer advertise sessions?)')
+      }
+    } catch (error) {
+      add('peer projects registered', false, error.message)
+    }
+  }
+
   const failed = rows.filter((row) => !row.ok).length
   const suffix = withPeer ? '' : ' (peer skipped: run with --peer)'
   console.log(`\n${rows.length - failed}/${rows.length} checks passed${suffix}${warnings > 0 ? `, ${warnings} warning(s)` : ''}`)
