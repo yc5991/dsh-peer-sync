@@ -45,6 +45,8 @@ const snapshot = {
     ],
   },
   dav: { watch: '/Volumes/dav', mounted: true, entries: 2, error: null, enabled: true },
+  listening: true,
+  bindError: null,
   diag: { build: '0.8.8', loadedFrom: 'file:///x/lib/sync.js', pid: 44476, uptimeMs: 300000, node: 'v24.21.0' },
   pairing: { mode: 'auto', port: 4401 },
   paths: { log: '~/.dsh/peer-sync/sync.log', config: '~/.dsh/peer-sync/config.json' },
@@ -165,6 +167,11 @@ const silent = renderPanel({ ...snapshot, bundles: { toInstall: [], needsManualI
 assert.match(silent, /没有通告插件集/, 'an empty peer bundle advert is called out')
 const aligned = renderPanel({ ...snapshot, bundles: { toInstall: [], needsManualInstall: [], stateDiff: [], peerAdvertised: 23 } }).text
 assert.match(aligned, /没有需要补装的/, 'a real aligned set still reads as aligned')
+
+// A machine that could not bind must say it is outbound-only, not look healthy.
+const unbound = renderPanel({ ...snapshot, listening: false, bindError: 'EADDRNOTAVAIL' }).text
+assert.match(unbound, /只能出站/, 'an unbound listener is reported')
+assert.match(unbound, /EADDRNOTAVAIL/, 'with the reason')
 
 // Every false state flipped: the composer is open and the send button is busy.
 const open = renderPanel(snapshot, { open: true }).text

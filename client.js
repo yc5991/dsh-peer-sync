@@ -643,6 +643,17 @@ window.__ModuleLoader__.load({
               : ''),
         ),
 
+        data.listening === false
+          ? h(
+              'p',
+              { style: S.warn },
+              L(
+                `本机没能绑上监听地址（${data.bindError || '?'}），现在是"只能出站"：对端连不进来，但同步仍可由此发起。地址恢复后会自动重试，不用重启 dsh。`,
+                `This machine could not bind its listen address (${data.bindError || '?'}) and is outbound-only: peers cannot reach in, though sync can still start from here. It retries on its own once the address is back — no restart needed.`,
+              ),
+            )
+          : null,
+
         h(Section, { title: `${L('对端', 'Peers')} (${peers.length})` }, h(Peers, { peers, onChanged: refresh })),
 
         h(
