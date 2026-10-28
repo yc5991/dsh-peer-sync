@@ -23,8 +23,13 @@ for (const match of http.matchAll(/url\.pathname\.startsWith\(\s*['"]([^'"]+)['"
 
 // Panel API: `route === '/name'` comparisons inside index.js. Only literals that
 // look like paths count, so an unrelated `route === 'function'` cannot sneak in.
-for (const match of index.matchAll(/route\s*===\s*['"](\/[^'"]*)['"]/g)) {
-  found.add(`/api/peer-sync${match[1]}`.replace(/\/$/, ''))
+// A line marked TEMPORARY is a probe that will be deleted with its code, and
+// documenting it would only create a phantom route a week later.
+for (const line of index.split('\n')) {
+  if (line.includes('TEMPORARY')) continue
+  for (const match of line.matchAll(/route\s*===\s*['"](\/[^'"]*)['"]/g)) {
+    found.add(`/api/peer-sync${match[1]}`.replace(/\/$/, ''))
+  }
 }
 
 const missing = [...found].filter((route) => !docs.includes(route)).sort()

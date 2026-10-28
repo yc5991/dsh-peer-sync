@@ -200,7 +200,7 @@ function panelApi(engine, ctx) {
       // TEMPORARY probe: the client slot's props are undocumented, so the panel
       // reports what it receives here and the shape is read from disk instead of
       // guessed. Remove once the marker is implemented.
-      if (req.method === 'POST' && route === '/client-probe') {
+      if (req.method === 'POST' && route === '/client-probe') { // TEMPORARY
         const body = await readJsonBody(req)
         const file = path.join(dshHome(), 'peer-sync', 'client-probe.json')
         let previous = {}
