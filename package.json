@@ -1,9 +1,25 @@
 {
   "name": "dsh-peer-sync",
-  "version": "0.11.8",
+  "version": "0.11.9",
   "private": true,
   "type": "module",
   "description": "Keeps profile configuration, credential refs and agent presets identical across two DSH machines linked by a direct cable.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yc5991/dsh-peer-sync.git"
+  },
+  "homepage": "https://github.com/yc5991/dsh-peer-sync#readme",
+  "bugs": {
+    "url": "https://github.com/yc5991/dsh-peer-sync/issues"
+  },
+  "keywords": [
+    "dsh",
+    "cordis",
+    "peer-to-peer",
+    "sync",
+    "webdav"
+  ],
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
@@ -19,7 +35,8 @@
     "locale/*.json",
     "icon.svg",
     "README.md",
-    "test/*.mjs"
+    "test/*.mjs",
+    "CHANGELOG.md"
   ],
   "dsh": {
     "bundle": {

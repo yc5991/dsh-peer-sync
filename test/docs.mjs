@@ -62,4 +62,13 @@ const testFiles = fs
 const unlisted = testFiles.filter((name) => !readme.includes(`test/${name}`))
 assert.deepEqual(unlisted, [], `tests missing from the README directory listing: ${unlisted.join(', ')}`)
 
+// What a public repository needs to be believed and reused, and a changelog that
+// says what was not verified rather than listing only the wins.
+const pkg = JSON.parse(read('package.json'))
+assert.equal(pkg.license, 'MIT', 'package.json declares the license that the LICENSE file grants')
+assert.match(String(pkg.repository && pkg.repository.url), /github\.com/, 'package.json points at the repository')
+assert.ok(Array.isArray(pkg.files) && pkg.files.includes('CHANGELOG.md'), 'the changelog ships with the package')
+assert.ok(fs.existsSync(new URL('../CHANGELOG.md', import.meta.url)), 'the changelog exists')
+assert.match(read('CHANGELOG.md'), /未验证|没有验证/, 'the changelog states what is not verified')
+
 console.log(`docs: ${found.size} routes documented, ${documented.size} documented routes exist, ${testFiles.length} tests listed`)
