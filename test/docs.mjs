@@ -71,4 +71,29 @@ assert.ok(Array.isArray(pkg.files) && pkg.files.includes('CHANGELOG.md'), 'the c
 assert.ok(fs.existsSync(new URL('../CHANGELOG.md', import.meta.url)), 'the changelog exists')
 assert.match(read('CHANGELOG.md'), /未验证|没有验证/, 'the changelog states what is not verified')
 
+// The module table names files and their exports. Both can drift: a renamed export
+// or a helper that moved out of a module leaves the table describing nothing.
+const moduleRows = [...docs.matchAll(/^\|\s*`(lib\/[a-z]+\.js)`\s*\|([^|]*)\|([^|]*)\|/gm)]
+assert.ok(moduleRows.length >= 8, `the module table lists the lib files (${moduleRows.length} rows)`)
+const libFiles = fs
+  .readdirSync(new URL('../lib/', import.meta.url))
+  .filter((name) => name.endsWith('.js'))
+  .sort()
+const documentedFiles = new Set(moduleRows.map((row) => row[1].replace('lib/', '')))
+const undocumented = libFiles.filter((name) => !documentedFiles.has(name))
+assert.deepEqual(undocumented, [], `lib files missing from the module table: ${undocumented.join(', ')}`)
+
+const missingExports = []
+for (const row of moduleRows) {
+  const file = row[1]
+  const names = [...row[3].matchAll(/`([A-Za-z_$][\w$]*)`/g)].map((match) => match[1])
+  if (names.length === 0) continue
+  const loaded = await import(new URL(`../${file}`, import.meta.url))
+  for (const name of names) {
+    // `foo …` in the table means a family of exports; only exact names are checked.
+    if (!(name in loaded)) missingExports.push(`${file}: ${name}`)
+  }
+}
+assert.deepEqual(missingExports, [], `module table names exports that do not exist: ${missingExports.join(', ')}`)
+
 console.log(`docs: ${found.size} routes documented, ${documented.size} documented routes exist, ${testFiles.length} tests listed`)

@@ -24,14 +24,39 @@ python docs\render-flow.py           # -> docs/flow.png
 | `lib/units.js` | 同步单元：patch / presets / credentials / 项目文件的收集与哈希 | `collectUnits`、`unitFromId`、`manifestOf` |
 | `lib/patch.js` | `cordis.patch.yml` 的槽位化与按条目三方合并 | `mergePatch`、`patchContentHash`、`denyKeys` |
 | `lib/apply.js` | 落盘：单元写入、冲突副本、插件集应用 | `applyUnit`、`applyBundleSet` |
-| `lib/sessions.js` | 会话元数据与日志读取、标题（`sessionQuery` + 投影文件） | `listLocalSessions`、`sessionTitles`、`titleOf` |
+| `lib/sessions.js` | 会话元数据与日志读取、标题（`sessionQuery` + 投影文件）、会话目录扫描 | `listLocalSessions`、`localSessionDirs`、`sessionTitles`、`titleOf` |
 | `lib/webdav.js` | WebDAV 服务端，够 macOS WebDAVFS 挂载用 | `createWebdav` |
 | `lib/discovery.js` | UDP 广播与发现 | `startDiscovery` |
 | `lib/atomic.js` | 原子写（临时文件 + rename） | `writeFileAtomic`、`writeBytesAtomic` |
 | `lib/json.js` | 尽力而为的 JSON 读取（不因半截文件炸掉同步） | `readJson` |
 | `lib/paths.js` | 所有路径解析（`~` 展开、profile 目录、状态目录） | `dshHome`、`patchPath`、`localDir` … |
 | `lib/services.js` | 软服务查找：`ctx.get(name)`，没有 `inject` 也不抛 | `serviceOf` |
-| `client.js` | 设置面板：对端、插件集、会话（远程/镜像）、挂载状态、发消息、建会话、撤销 | — |
+| `lib/log.js` | 日志：按天滚动的文件 + 控制台 | `createLog` |
+| `client.js` | 设置面板（对端、插件集、会话、挂载、对面项目）；会话行位置标记与悬浮卡两个插槽 | — |
+
+## 对面的项目怎么出现在这台
+
+```
+config.remoteWorkspaces{register, mounts[{remote, local}]}
+        │
+        │ 候选：对端会话通告里的 cwd（需要在跑/在列表里的会话）
+        ▼
+   mapRemotePath(cwd, mounts)      /Volumes/DATA/ds → Z:\ds（整段前缀匹配）
+        │
+        │ 只认现在能 stat 到的目录：挂载断了就不注册，避免点开是空的条目
+        ▼
+   workspaceRegistry.create(local, "<目录> · <对端>")
+        │                          宿主会把 Z:\ds 规范化成 \\10.77.0.2\DATA\ds
+        │ 返回的记录不一定带 id → resolveByPath 补；id 记进 remoteWorkspaceIds
+        ▼
+   statusObject → sessionPlaces{ [sessionId]: 'local' | 'peer' }
+        │        先按工作区身份（id ∈ remoteWorkspaceIds）判，再按 cwd 兜底
+        ▼
+   client 插槽 sidebar.session.row.leading（12px SVG：云朵/显示器）
+              + sidebar.session.row.hover（同一事实的文字版）
+```
+
+两个坑写在代码注释里也写在测试里：`create()` 对**已知路径**不返回 id；解码出的 UNC 会少一个前导斜杠（`\\host\share` → `/host/share`），所以路径比较统一过 `slashKey`。
 
 ## 两条通道，两套凭据
 
