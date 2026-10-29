@@ -223,10 +223,28 @@ curl.exe -H "x-peer-token: <对端 token>" `
 
 规则：
 
-- 候选目录来自对端**会话通告里的 `cwd`**（已在跑的会话告诉你它们在哪个项目里），所以对面得开着 `share.sessions`
+- 候选目录有三个来源，按可信度排序：**对端通告的工作区列表**（`share.workspaces: true`，只有路径和标题）＞ 对端**会话的 cwd**（跑过会话的项目）＞ 你手写的 `include` 列表
 - 只注册**现在真能 stat 到**的目录：挂载断了就不会留下一个点开是空的条目
 - 标题是 `<目录名> · <对端名>`（例：`ds · mac-lan`），本机自己的项目**不动**
 - `mounts` 只做整段路径前缀匹配，`/Volumes/DATA2` 不会被 `/Volumes/DATA` 吞掉
+- 本机为对端创建的工作区**不会再通告回去**（否则等于把它自己推给自己）
+
+### 只看到一个项目？那是发现逻辑的限制
+
+第一版只从**会话的 cwd** 推项目，于是"从没跑过会话的项目"永远发现不了——实测只过来了一个 `ds`，而挂载里还有 `ccut`、`Mac迁移`、`SONY`。两个补救：
+
+```json
+{
+  "share": { "sessions": true, "workspaces": true },   // 对端：把项目列表也通告出来
+  "remoteWorkspaces": {
+    "register": true,
+    "mounts": [{ "remote": "/Volumes/DATA", "local": "Z:\\" }],
+    "include": ["/Volumes/DATA/ccut", "/Volumes/DATA/Mac迁移"]   // 本机：手写几个也行
+  }
+}
+```
+
+`include` 里的路径是**对端视角**的路径，注册时照常翻译成本机挂载路径。它不需要对端配合，是"我就是想让这个项目出现"的直接表达。
 
 实测：`Z:` 就是她那台的 `/Volumes/DATA`，配置后日志出现
 
