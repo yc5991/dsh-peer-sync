@@ -44,7 +44,7 @@ function sendJson(res, status, value) {
  * guess 鈥?twice now a guess cost a wrong implementation 鈥?this reports exactly
  * what the running host exposes. Read-only, loopback only, fixed allowlist.
  */
-const INTROSPECTABLE = new Set(['agents', 'agentLoop', 'sessionController', 'sessionQuery', 'workspaceRegistry', 'webServer', 'pluginManager'])
+const INTROSPECTABLE = new Set(['agents', 'agentLoop', 'sessionController', 'sessionQuery', 'workspaceRegistry', 'webServer', 'pluginManager', 'tools'])
 
 function introspect(ctx, name) {
   if (!INTROSPECTABLE.has(name)) return { ok: false, reason: 'not-allowed', allowed: [...INTROSPECTABLE] }
