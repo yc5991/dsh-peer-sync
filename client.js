@@ -648,6 +648,18 @@ window.__ModuleLoader__.load({
       const items = Array.isArray(sessions.items) ? sessions.items : []
       const visible = filterItems(items, filter)
       const shown = visible.slice(0, 8)
+      // Group the visible rows by the project they belong to; rows whose cwd is
+      // outside every mount collect under one honest heading.
+      const groups = []
+      const byTitle = new Map()
+      for (const item of shown) {
+        const title = item.group || L('不在挂载内', 'outside the mounts')
+        if (!byTitle.has(title)) {
+          byTitle.set(title, { title, items: [] })
+          groups.push(byTitle.get(title))
+        }
+        byTitle.get(title).items.push(item)
+      }
       const counts = {
         active: items.filter((item) => !item.archived).length,
         mirrored: items.filter((item) => item.mirrored && !item.archived).length,
@@ -761,10 +773,24 @@ window.__ModuleLoader__.load({
                     ? h('span', { style: S.dim }, L(`另有 ${visible.length - shown.length} 条被折起`, `${visible.length - shown.length} hidden`))
                     : null,
                 ),
-                h(
-                  'ul',
-                  { style: S.list },
-                  shown.map((item) => h(SessionRow, { key: item.id, item, onChanged: refresh })),
+                // Grouped by project, so this reads like the sidebar's tree: each of
+                // the peer's projects with the sessions that ran inside it.
+                groups.map((group) =>
+                  h(
+                    'div',
+                    { key: group.title, style: { marginBottom: 8 } },
+                    h(
+                      'div',
+                      { style: S.row },
+                      h('span', { style: S.name }, group.title),
+                      h('span', { style: S.dim }, `${group.items.length} ${L('个会话', 'sessions')}`),
+                    ),
+                    h(
+                      'ul',
+                      { style: S.list },
+                      group.items.map((item) => h(SessionRow, { key: item.id, item, onChanged: refresh })),
+                    ),
+                  ),
                 ),
                 shown.length === 0
                   ? h('p', { style: S.hint }, L('这个过滤下没有会话。', 'Nothing matches this filter.'))
