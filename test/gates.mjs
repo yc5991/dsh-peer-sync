@@ -4,7 +4,7 @@
 // un-trusted, a panel that hid the peer's sessions when nothing was mirrored.
 
 import assert from 'node:assert/strict'
-import { mapLocalToRemote, mapRemotePath, mergeSessionList, placeOfSession, remoteSessionsAllowed, sessionsPublished, underAny } from '../lib/sync.js'
+import { listMountProjects, mapLocalToRemote, mapRemotePath, mergeSessionList, placeOfSession, remoteSessionsAllowed, sessionsPublished, underAny } from '../lib/sync.js'
 import { identifyPeer, trustOf } from '../lib/config.js'
 import { titleFromSnapshot, titleOf } from '../lib/sessions.js'
 
@@ -132,5 +132,14 @@ assert.equal(mapLocalToRemote('C:\\Users\\user\\Documents', reverse), null)
 assert.equal(mapLocalToRemote('', reverse), null)
 // round trip: every mapped peer path comes back unchanged
 assert.equal(mapLocalToRemote(mapRemotePath('/Volumes/DATA/ds', mounts), reverse), '/Volumes/DATA/ds')
+
+// --- scanning a mount for projects -------------------------------------------
+// "Show me all of them" means the mount's own directories, minus the ones that are
+// clearly not projects.
+const scanned = listMountProjects('Z:\\', [])
+assert.ok(scanned.includes('ds'), 'a real project is found')
+assert.ok(!scanned.includes('Library'), 'Library is skipped by default')
+assert.ok(!scanned.includes('Download'), 'so is Download')
+assert.deepEqual(listMountProjects('Z:\\nonexistent-mount', []), [], 'a missing mount yields nothing')
 
 console.log('gates: ok')
