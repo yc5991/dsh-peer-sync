@@ -207,6 +207,9 @@ flowchart TD
 | 结束即返回 | 已实测 | `sleep 45` 任务第 7 秒被中断，调用方 8.5 秒拿到 `turn-ended-without-reply` |
 | 通告缓存的水合 | 已实测 | 撤销对端（不再有 hello）+ 重载 → 面板仍有 10 条，只能来自 `advert.json` |
 | 建会话自动命名 | 已实测 | 她的入站回 `title: "来自 win 的会话"`，投影与通告都非空 |
+| 对面项目进侧边栏 | 已实测 | `remote workspace registered: Z:\ds as "ds · mac-lan"`；用户在侧边栏看到该项，提示框显示 `\\10.77.0.2\DATA\ds`（截图） |
+| 会话行位置标记 | 已实测 | 用户截图：三条本机会话行前都有显示器图标 → 插槽确实渲染、SVG 确实画出来 |
+| 在对端打开项目 | 已实测 | `Z:\ds` → `remotePath: /Volumes/DATA/ds`；她的会话列表出现该 cwd、`byPeer: win` |
 
 ## 三条设计取舍
 
